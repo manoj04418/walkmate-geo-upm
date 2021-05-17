@@ -37,7 +37,7 @@ class Post(
 
     override fun describeContents(): Int { return 0 }
 
-    companion object CREATOR : Parcelable.Creator<User> {
+    companion object CREATOR : Parcelable.Creator<Post> {
         private fun Parcel.writeDate(date: Date?) { writeLong(date?.time ?: -1) }
         private fun Parcel.readDate(): Date? {
             val long = readLong()
@@ -54,7 +54,7 @@ class Post(
             return if (latitude != -0.000000001 && longitude != -0.000000001) GeoPoint(latitude, longitude) else null
         }
 
-        override fun createFromParcel(parcel: Parcel): User { return User(parcel) }
-        override fun newArray(size: Int): Array<User?> { return arrayOfNulls(size) }
+        override fun createFromParcel(parcel: Parcel): Post { return Post(parcel) }
+        override fun newArray(size: Int): Array<Post?> { return arrayOfNulls(size) }
     }
 }
