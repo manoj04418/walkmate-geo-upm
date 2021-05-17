@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Walkmate</string>
+    <string name="mapbox_access_token">pk.eyJ1IjoiZ2dsb3BleiIsImEiOiJja29zbjMxeHgwMzRmMnBxandldmliNDA4In0.ByBh2BqAzwjIgHGiwG0mEg</string>
 </resources>

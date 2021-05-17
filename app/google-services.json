@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "270105585573",
+    "project_id": "walkmate-244de",
+    "storage_bucket": "walkmate-244de.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:270105585573:android:508b94f81334550a142a4c",
+        "android_client_info": {
+          "package_name": "com.upm.gabrau.walkmate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "270105585573-ktj1u4e4c1b35eoh6s55sjehiikjl0dl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAY5T8JsAaSnmvizFWBx8BD2lVyy-3pCEc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "270105585573-ktj1u4e4c1b35eoh6s55sjehiikjl0dl.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
