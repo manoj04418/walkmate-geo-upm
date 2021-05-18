@@ -25,9 +25,11 @@ class Queries {
         }
     }
 
-    suspend fun createUser(user: User): User? {
+    fun isUserSessionActive() = FirebaseAuth.getInstance().currentUser != null
+
+    suspend fun createUser(email: String, password: String, user: User): User? {
         return try {
-            val ref = auth.signInAnonymously().await()
+            val ref = auth.createUserWithEmailAndPassword(email, password).await()
             ref.user?.uid?.let {
                 instance.collection("users").document(it).set(user.toMap()).await()
                 user
