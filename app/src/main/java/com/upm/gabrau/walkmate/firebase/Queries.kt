@@ -73,12 +73,12 @@ class Queries {
         }
     }
 
-    suspend fun removePost(postId: String): Boolean {
+    suspend fun removePost(post: Post): Boolean {
         return try {
             if (auth.currentUser == null) false
             else {
                 instance.collection("posts").document(auth.currentUser!!.uid)
-                    .collection("userPosts").document(postId)
+                    .collection("userPosts").document(post.id!!)
                     .delete().await()
                 true
             }

@@ -17,8 +17,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.GeoPoint
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
@@ -33,10 +31,10 @@ import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.plugins.annotation.*
 import com.mapbox.mapboxsdk.utils.ColorUtils
 import com.upm.gabrau.walkmate.databinding.ActivityNewPostBinding
-import com.upm.gabrau.walkmate.databinding.GatheredAddressesBinding
 import com.upm.gabrau.walkmate.R
 import com.upm.gabrau.walkmate.firebase.Queries
 import com.upm.gabrau.walkmate.models.Post
+import com.upm.gabrau.walkmate.utils.AddressAdapter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -258,32 +256,4 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
     override fun onAddressClicked(address: Address) {
         drawCircle(LatLng(address.latitude, address.longitude))
     }
-}
-
-class AddressAdapter(private val addressList: List<Address>, private val listener: OnAddressClicked) :
-    RecyclerView.Adapter<AddressAdapter.AddressViewHolder>() {
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AddressViewHolder {
-        val binding = GatheredAddressesBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return AddressViewHolder(binding)
-    }
-
-    override fun getItemCount() = addressList.size
-
-    override fun onBindViewHolder(holder: AddressViewHolder, position: Int) {
-        with(holder) {
-            with(addressList[position]) {
-                val text = "${this.locality}, ${this.countryName}"
-                binding.address.text = text
-                binding.address.setOnClickListener{
-                    listener.onAddressClicked(this)
-                }
-            }
-        }
-    }
-
-    inner class AddressViewHolder(val binding: GatheredAddressesBinding) :
-        RecyclerView.ViewHolder(binding.root)
-
-    interface OnAddressClicked{ fun onAddressClicked(address: Address) }
 }
