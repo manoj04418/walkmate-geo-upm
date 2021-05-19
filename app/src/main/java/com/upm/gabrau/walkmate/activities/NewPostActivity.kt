@@ -1,34 +1,58 @@
 package com.upm.gabrau.walkmate.activities
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.Color
+import android.location.Address
+import android.location.Geocoder
+import android.location.LocationManager
 import android.os.Bundle
-import android.util.Log
-import android.view.animation.BounceInterpolator
+import android.view.*
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.GeoPoint
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
-import com.mapbox.mapboxsdk.camera.CameraUpdate
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
-import com.mapbox.mapboxsdk.location.LocationComponent
+import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
 import com.mapbox.mapboxsdk.location.LocationComponentOptions
 import com.mapbox.mapboxsdk.location.modes.CameraMode
 import com.mapbox.mapboxsdk.location.modes.RenderMode
+import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.plugins.annotation.*
-import com.upm.gabrau.walkmate.R
+import com.mapbox.mapboxsdk.utils.ColorUtils
 import com.upm.gabrau.walkmate.databinding.ActivityNewPostBinding
+import com.upm.gabrau.walkmate.databinding.GatheredAddressesBinding
+import com.upm.gabrau.walkmate.R
+import com.upm.gabrau.walkmate.firebase.Queries
+import com.upm.gabrau.walkmate.models.Post
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
+class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
+    ActivityCompat.OnRequestPermissionsResultCallback {
 
-class NewPostActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissionsResultCallback {
     private lateinit var binding: ActivityNewPostBinding
     private val isCurrentLocationRequested: MutableLiveData<Boolean> = MutableLiveData()
+    private val changedUI: MutableLiveData<String> = MutableLiveData()
+
+    private lateinit var mapboxMap: MapboxMap
+    private lateinit var circleManager: CircleManager
+
+    private var addresses: List<Address>? = arrayListOf()
+    private var selectedAddress: GeoPoint? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,22 +62,39 @@ class NewPostActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissions
         val view = binding.root
         setContentView(view)
 
-        setSupportActionBar(binding.toolbar.root)
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setDisplayShowHomeEnabled(true)
-        binding.toolbar.root.setNavigationOnClickListener {
-            onBackPressed()
+        changedUI.value = Style.OUTDOORS
+
+        toolbar()
+        binding.gatheredAddresses.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        initAdapter()
+        initFABStyle()
+
+        binding.editTextLocation.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val inputMM = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager?
+                inputMM?.hideSoftInputFromWindow(view.windowToken, 0)
+                binding.gatheredAddresses.visibility = View.VISIBLE
+                gatheredAddresses()
+            } else false
         }
 
         binding.mapView.onCreate(savedInstanceState)
-        binding.mapView.getMapAsync { mapboxMap ->
-            lateinit var circleManager: CircleManager
+        binding.mapView.getMapAsync {
+            this.mapboxMap = it
+            changedUI.observe(this, { style ->
+                mapboxMap.setStyle(style)
+            })
+
+            mapboxMap.cameraPosition = CameraPosition.Builder()
+                .zoom(3.0).target(LatLng(40.4169019,-3.7056721))
+                .build()
+
             val locationComponent = mapboxMap.locationComponent
             val locationComponentOptions = LocationComponentOptions.builder(this)
                 .pulseEnabled(true)
                 .build()
 
-            mapboxMap.setStyle(Style.MAPBOX_STREETS) { style ->
+            mapboxMap.setStyle(changedUI.value) { style ->
                 val locationComponentActivationOptions = LocationComponentActivationOptions
                     .builder(this, style)
                     .locationComponentOptions(locationComponentOptions)
@@ -77,79 +118,172 @@ class NewPostActivity : AppCompatActivity(), ActivityCompat.OnRequestPermissions
                 })
             }
 
-            mapboxMap.addOnMapClickListener { point ->
-                isCurrentLocationRequested.value = false
-                val cameraPosition = CameraPosition.Builder()
-                    .target(point)
-                    .build()
-
-                val circleOptions = CircleOptions()
-                    .withLatLng(point)
-
-                circleManager.create(circleOptions)
-
-                mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
-
-                true
-            }
+            mapboxMap.addOnMapClickListener { point -> drawCircle(point) }
         }
 
         binding.fabLocation.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(
-                        this,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    )
-                ) {
-                    Log.d("TAG", "onCreate: ni se cuando salta esto")
-                    val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
-                    ActivityCompat.requestPermissions(this, permissions, 1)
-                } else {
-                    Log.d("TAG", "onCreate: ni esto tampoco")
-                    val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
-                    ActivityCompat.requestPermissions(this, permissions, 1)
-                }
+            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            var enabled = false
+
+            try {
+                enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            } catch (ex: java.lang.Exception) { }
+
+
+            if (!enabled) {
+                Toast.makeText(this, "You do not have the location active!", Toast.LENGTH_SHORT).show()
             } else {
-                isCurrentLocationRequested.value?.let {
-                    isCurrentLocationRequested.value = isCurrentLocationRequested.value!!.not()
-                } ?: run {
-                    isCurrentLocationRequested.value = true
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                        val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
+                        ActivityCompat.requestPermissions(this, permissions, 1)
+                    } else {
+                        val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
+                        ActivityCompat.requestPermissions(this, permissions, 1)
+                    }
+                } else {
+                    isCurrentLocationRequested.value?.let {
+                        isCurrentLocationRequested.value = isCurrentLocationRequested.value!!.not()
+                    } ?: run {
+                        isCurrentLocationRequested.value = true
+                    }
                 }
             }
         }
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.toolbar_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId) {
+            R.id.toolbar_done -> {
+                CoroutineScope(Dispatchers.Main).launch {
+                    if (selectedAddress != null && binding.editTextTitle.text?.trim()?.isNotEmpty() == true) {
+                        selectedAddress?.let {
+                            binding.editTextTitle.text?.let{ title ->
+                                val post = Post(name = title.toString(),
+                                    geoPoint = GeoPoint(it.latitude, it.longitude))
+                                val success = Queries().uploadPost(post)
+                                if (success) finish()
+                                else Toast.makeText(baseContext, "Something went wrong",
+                                    Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        Toast.makeText(baseContext, "Please, fill up all the fields before creating a new post",
+                            Toast.LENGTH_SHORT).show()
+                    }
+                }
+                true
+            }
+            else -> true
+        }
+    }
+
+    private fun toolbar() {
+        setSupportActionBar(binding.toolbar.root)
+        supportActionBar?.title = "New Post"
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
+        binding.toolbar.root.setNavigationOnClickListener { onBackPressed() }
+    }
+
+    private fun initAdapter() {
+        binding.gatheredAddresses.adapter = AddressAdapter(addresses!!, this)
+    }
+
+    private fun gatheredAddresses(): Boolean {
+        return try {
+            val geocoder = Geocoder(this)
+            addresses = geocoder.getFromLocationName(binding.editTextLocation.text.toString(), 5)
+            addresses?.let { initAdapter() }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun drawCircle(location: LatLng): Boolean {
+        circleManager.deleteAll()
+        isCurrentLocationRequested.value = false
+        val cameraPosition = CameraPosition.Builder()
+            .zoom(if (mapboxMap.cameraPosition.zoom > 10.0) mapboxMap.cameraPosition.zoom else 10.0)
+            .target(location)
+            .build()
+
+        val circleOptions = CircleOptions()
+            .withCircleColor(ColorUtils.colorToRgbaString(resources.getColor(R.color.purple_500, resources.newTheme())))
+            .withCircleRadius(6f)
+            .withLatLng(location)
+
+        circleManager.create(circleOptions)
+        selectedAddress = GeoPoint(location.latitude, location.longitude)
+        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
+        return true
+    }
+
+    private fun initFABStyle() {
+        binding.fabMapStyle.setOnClickListener {
+            if (changedUI.value == Style.SATELLITE) {
+                changedUI.value = Style.OUTDOORS
+                binding.fabMapStyle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_satellite))
+            } else {
+                changedUI.value = Style.SATELLITE
+                binding.fabMapStyle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_street))
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             1 -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    if (ActivityCompat.checkSelfPermission(
-                            this,
-                            Manifest.permission.ACCESS_FINE_LOCATION
-                        ) == PackageManager.PERMISSION_GRANTED
-                    ) {
+                    if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                        == PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show()
                         isCurrentLocationRequested.value = true
                     }
                 } else {
-                    val toast =
-                        Toast.makeText(
-                            applicationContext,
-                            "Grant location permission manually in settings",
-                            Toast.LENGTH_LONG
-                        )
-                    toast.show()
+                    Toast.makeText(applicationContext, "Grant location permission manually in settings", Toast.LENGTH_LONG).show()
                 }
                 return
             }
         }
     }
+
+    override fun onAddressClicked(address: Address) {
+        drawCircle(LatLng(address.latitude, address.longitude))
+    }
+}
+
+class AddressAdapter(private val addressList: List<Address>, private val listener: OnAddressClicked) :
+    RecyclerView.Adapter<AddressAdapter.AddressViewHolder>() {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AddressViewHolder {
+        val binding = GatheredAddressesBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return AddressViewHolder(binding)
+    }
+
+    override fun getItemCount() = addressList.size
+
+    override fun onBindViewHolder(holder: AddressViewHolder, position: Int) {
+        with(holder) {
+            with(addressList[position]) {
+                val text = "${this.locality}, ${this.countryName}"
+                binding.address.text = text
+                binding.address.setOnClickListener{
+                    listener.onAddressClicked(this)
+                }
+            }
+        }
+    }
+
+    inner class AddressViewHolder(val binding: GatheredAddressesBinding) :
+        RecyclerView.ViewHolder(binding.root)
+
+    interface OnAddressClicked{ fun onAddressClicked(address: Address) }
 }

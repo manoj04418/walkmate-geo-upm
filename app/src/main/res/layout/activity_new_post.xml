@@ -15,9 +15,8 @@
         android:id="@+id/text_view_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:text="Title"
         android:textStyle="bold"
@@ -30,8 +29,9 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_margin="16dp"
-        android:inputType="text"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
         app:counterEnabled="false"
         app:errorEnabled="false"
         app:hintEnabled="false"
@@ -40,12 +40,14 @@
         app:layout_constraintTop_toBottomOf="@+id/text_view_title">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/edit_text_location"
+            android:id="@+id/edit_text_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxLines="1"
+            android:hint="Paseo majestuoso frente a las flores"
+            android:imeOptions="actionDone"
+            android:inputType="textCapSentences"
             android:maxLength="56"
-            android:hint="Monumento a Cervantes" />
+            android:maxLines="1" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -54,33 +56,85 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:text="Location"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="@+id/layout_title"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@+id/layout_title"
         app:layout_constraintTop_toBottomOf="@+id/layout_title" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_location"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        app:counterEnabled="false"
+        app:errorEnabled="false"
+        app:hintEnabled="false"
+        app:layout_constraintEnd_toEndOf="@+id/text_view_location"
+        app:layout_constraintStart_toStartOf="@+id/text_view_location"
+        app:layout_constraintTop_toBottomOf="@+id/text_view_location">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edit_text_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Monumento a Cervantes"
+            android:imeOptions="actionDone"
+            android:inputType="textCapSentences"
+            android:maxLength="56"
+            android:maxLines="1" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/gathered_addresses"
+        android:visibility="invisible"
+        android:layout_width="0dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="8dp"
+        tools:listitem="@layout/gathered_addresses"
+        tools:itemCount="3"
+        app:layout_constraintEnd_toEndOf="@+id/layout_location"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/layout_location"
+        app:layout_constraintTop_toBottomOf="@+id/layout_location" />
 
     <com.mapbox.mapboxsdk.maps.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/text_view_location"
+        app:layout_constraintTop_toBottomOf="@+id/gathered_addresses"
         app:layout_constraintVertical_bias="0.0" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_location"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:layout_anchorGravity="bottom|end"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="16dp"
-        app:srcCompat="@drawable/ic_location"
-        android:tint="@color/white"/>
+        app:srcCompat="@drawable/ic_location"/>
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_map_style"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:backgroundTint="@color/teal_700"
+        app:layout_anchorGravity="center|end"
+        app:layout_constraintBottom_toTopOf="@+id/fab_location"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:tint="@color/white"
+        app:srcCompat="@drawable/ic_satellite" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

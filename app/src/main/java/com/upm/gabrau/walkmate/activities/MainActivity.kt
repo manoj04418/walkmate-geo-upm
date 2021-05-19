@@ -8,16 +8,20 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.firestore.GeoPoint
 import com.upm.gabrau.walkmate.databinding.ActivityMainBinding
 import com.upm.gabrau.walkmate.databinding.ItemPostBinding
+import com.upm.gabrau.walkmate.firebase.Queries
 import com.upm.gabrau.walkmate.models.Post
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private const val LAUNCH_DETAIL_POST_ACTIVITY = 1
 private const val LAUNCH_NEW_POST_ACTIVITY = 2
 
 class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     private lateinit var binding: ActivityMainBinding
+    private var posts: ArrayList<Post?> = arrayListOf()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,13 +31,10 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
 
         setSupportActionBar(binding.toolbar.root)
 
-        val posts = arrayOf(
-            Post(name = "Gabriel subnormal", geoPoint = GeoPoint(0.0, 0.0)),
-            Post(name = "Gabriel subnormal", geoPoint = GeoPoint(0.0, 0.0)),
-            Post(name = "Gabriel subnormal", geoPoint = GeoPoint(0.0, 0.0)),
-            Post(name = "Gabriel subnormal", geoPoint = GeoPoint(0.0, 0.0)),
-            Post(name = "Gabriel subnormal", geoPoint = GeoPoint(0.0, 0.0))
-        )
+        CoroutineScope(Dispatchers.Main).launch {
+            val posts = Queries().getUserFeed()
+            posts?.let { this@MainActivity.posts = it }
+        }
 
         binding.recyclerViewPosts.adapter = PostAdapter(posts, this)
         binding.recyclerViewPosts.layoutManager = LinearLayoutManager(baseContext)
@@ -51,17 +52,25 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        if (requestCode == LAUNCH_DETAIL_POST_ACTIVITY) {
-            Log.d("TAG", "onActivityResult: result from map activity")
-        } else if (requestCode == LAUNCH_NEW_POST_ACTIVITY) {
-            Log.d("TAG", "onActivityResult: result from new post activity")
-        } else {
-            super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            LAUNCH_DETAIL_POST_ACTIVITY -> {
+                Log.d("TAG", "onActivityResult: result from map activity")
+            }
+            LAUNCH_NEW_POST_ACTIVITY -> {
+                Log.d("TAG", "onActivityResult: result from new post activity")
+                CoroutineScope(Dispatchers.Main).launch {
+                    val posts = Queries().getUserFeed()
+                    posts?.let { this@MainActivity.posts = it }
+                }
+            }
+            else -> {
+                super.onActivityResult(requestCode, resultCode, data)
+            }
         }
     }
 }
 
-class PostAdapter(private val postList: Array<Post>,
+class PostAdapter(private val postList: ArrayList<Post?>,
                   private val itemClickListener: OnItemClickListener) :
     RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
@@ -76,11 +85,11 @@ class PostAdapter(private val postList: Array<Post>,
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         with(holder) {
             with(postList[position]) {
-                binding.textViewTitle.text = this.name
-                binding.textViewLocation.text = this.geoPoint.toString()
+                binding.textViewTitle.text = this?.name
+                binding.textViewLocation.text = this?.geoPoint.toString()
 
                 holder.itemView.setOnClickListener{
-                    itemClickListener.onItemClicked(this)
+                    itemClickListener.onItemClicked(this!!)
                 }
             }
         }

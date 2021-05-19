@@ -18,8 +18,11 @@ class Queries {
 
     suspend fun getUser(userId: String): User? {
         return try {
-            val ref = instance.collection("users").document(userId).get().await()
-            ref.toObject<User>()
+            if (auth.currentUser == null) null
+            else {
+                val ref = instance.collection("users").document(userId).get().await()
+                ref.toObject<User>()
+            }
         } catch (e: Exception) {
             null
         }
@@ -39,67 +42,82 @@ class Queries {
         }
     }
 
-    suspend fun getUserPosts(userId: String): ArrayList<Post?>? {
+    suspend fun getUserPosts(): ArrayList<Post?>? {
         return try {
-            val ref = instance.collection("posts").document(userId)
-                .collection("userPosts").get().await()
-            val posts: ArrayList<Post?> = arrayListOf()
-            ref.documents.forEach { post ->
-                posts.add(post.toObject<Post>())
+            if (auth.currentUser == null) null
+            else {
+                val ref = instance.collection("posts").document(auth.currentUser!!.uid)
+                    .collection("userPosts").get().await()
+                val posts: ArrayList<Post?> = arrayListOf()
+                ref.documents.forEach { post ->
+                    posts.add(post.toObject<Post>())
+                }
+                posts
             }
-            posts
         } catch (e: Exception) {
             null
         }
     }
 
-    suspend fun uploadPost(userId: String, post: Post): Boolean {
+    suspend fun uploadPost(post: Post): Boolean {
         return try {
-            instance.collection("posts").document(userId)
-                .collection("userPosts").document()
-                .set(post.toMap()).await()
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    suspend fun follow(currentUser: String, toBeFollowed: String): Boolean {
-        return try {
-            instance.collection("following").document(currentUser)
-                .collection("userFollowing").document(toBeFollowed)
-                .set("").await()
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    suspend fun unfollow(currentUser: String, toBeUnfollowed: String): Boolean {
-        return try {
-            instance.collection("following").document(currentUser)
-                .collection("userFollowing").document(toBeUnfollowed)
-                .delete().await()
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    suspend fun getUserFeed(userId: String): ArrayList<Post?>? {
-        return try {
-            val posts: ArrayList<Post?> = arrayListOf()
-            val users = instance.collection("following").document(userId)
-                .collection("userFollowing").get().await()
-            users.documents.forEach { user ->
-               val userPosts = instance.collection("posts").document(user.id)
-                   .collection("userPosts").orderBy("created", Query.Direction.DESCENDING)
-                   .limit(3).get().await()
-               userPosts.documents.forEach { post ->
-                   posts.add(post.toObject<Post>())
-               }
+            if (auth.currentUser == null) false
+            else {
+                instance.collection("posts").document(auth.currentUser!!.uid)
+                    .collection("userPosts").document()
+                    .set(post.toMap()).await()
             }
-            posts
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun follow(toBeFollowed: String): Boolean {
+        return try {
+            if (auth.currentUser == null) false
+            else {
+                instance.collection("following").document(auth.currentUser!!.uid)
+                    .collection("userFollowing").document(toBeFollowed)
+                    .set("").await()
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun unfollow(toBeUnfollowed: String): Boolean {
+        return try {
+            if (auth.currentUser == null) false
+            else {
+                instance.collection("following").document(auth.currentUser!!.uid)
+                    .collection("userFollowing").document(toBeUnfollowed)
+                    .delete().await()
+                true
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun getUserFeed(): ArrayList<Post?>? {
+        return try {
+            if (auth.currentUser == null) null
+            else {
+                val posts: ArrayList<Post?> = arrayListOf()
+                val users = instance.collection("following").document(auth.currentUser!!.uid)
+                    .collection("userFollowing").get().await()
+                users.documents.forEach { user ->
+                    val userPosts = instance.collection("posts").document(user.id)
+                        .collection("userPosts").orderBy("created", Query.Direction.DESCENDING)
+                        .limit(3).get().await()
+                    userPosts.documents.forEach { post ->
+                        posts.add(post.toObject<Post>())
+                    }
+                }
+                posts
+            }
         } catch (e: Exception) {
             null
         }

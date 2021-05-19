@@ -7,7 +7,6 @@ import androidx.appcompat.app.AppCompatActivity
 import com.upm.gabrau.walkmate.databinding.ActivityLoginBinding
 import com.upm.gabrau.walkmate.firebase.Queries
 import com.upm.gabrau.walkmate.models.User
-import com.upm.gabrau.walkmate.sharedPreferences.SharedPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,7 +38,6 @@ class LogInActivity : AppCompatActivity() {
                         val createdUser = Queries().createUser(binding.editTextEmail.text.toString(),
                             binding.editTextPassword.text.toString(), user)
                         if (createdUser != null) {
-                            createdUser.id?.let { SharedPreferences.putUserId(activity, it) }
                             startActivity(Intent(baseContext, MainActivity::class.java))
                         } else {
                             Toast.makeText(baseContext, "Algo ha salido mal", Toast.LENGTH_SHORT).show()
