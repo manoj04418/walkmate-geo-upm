@@ -15,9 +15,10 @@
         android:layout_marginTop="?attr/actionBarSize"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/recycler_view_posts">
-
-    </androidx.recyclerview.widget.RecyclerView>
+        tools:listitem="@layout/item_post"
+        android:id="@+id/recycler_view_posts"
+        android:paddingBottom="80dp"
+        android:clipToPadding="false"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab"
