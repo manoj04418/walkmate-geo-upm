@@ -51,10 +51,18 @@ class PostAdapter(
                 binding.textViewTitle.text = this?.name
                 binding.textViewTitle.isSelected = true
 
+                CoroutineScope(Dispatchers.Main).launch {
+                    val user = Queries().getUser()
+                    user?.let {
+                        binding.textViewUser.text = it.name
+                        binding.textViewUser.isSelected = true
+                    }
+                }
+
                 val c = Calendar.getInstance()
                 c.time = this?.created!!
                 val year = c.get(Calendar.YEAR).toString().substring(2, 4)
-                val date = "Added: ${c.get(Calendar.DAY_OF_MONTH)}/${c.get(Calendar.MONTH)+1}/$year"
+                val date = "Created: ${c.get(Calendar.DAY_OF_MONTH)}/${c.get(Calendar.MONTH)+1}/$year"
                 binding.textViewCreated.text = date
 
                 this.geoPoint?.let { geo ->

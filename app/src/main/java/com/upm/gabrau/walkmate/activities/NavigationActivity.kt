@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.graphics.Color.parseColor
 import android.location.Address
 import android.location.Geocoder
@@ -73,9 +74,9 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
     private lateinit var mapView: MapView
     private lateinit var toolbar: Toolbar
     private lateinit var data: Chip
-    private lateinit var carMode: Chip
-    private lateinit var cycleMode: Chip
-    private lateinit var walkMode: Chip
+    private lateinit var carMode: FloatingActionButton
+    private lateinit var cycleMode: FloatingActionButton
+    private lateinit var walkMode: FloatingActionButton
     private lateinit var locationFab: FloatingActionButton
     private lateinit var fab: FloatingActionButton
     private lateinit var addresses: RecyclerView
@@ -179,14 +180,14 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         })
 
         changedRouteMode.observe(this, {
-            carMode.setChipBackgroundColorResource(R.color.teal_500)
-            cycleMode.setChipBackgroundColorResource(R.color.teal_500)
-            walkMode.setChipBackgroundColorResource(R.color.teal_500)
+            carMode.backgroundTintList = ColorStateList.valueOf(getColor(R.color.teal_500))
+            cycleMode.backgroundTintList = ColorStateList.valueOf(getColor(R.color.teal_500))
+            walkMode.backgroundTintList = ColorStateList.valueOf(getColor(R.color.teal_500))
 
             when (it) {
-                DirectionsCriteria.PROFILE_DRIVING -> carMode.setChipBackgroundColorResource(R.color.purple_500)
-                DirectionsCriteria.PROFILE_CYCLING -> cycleMode.setChipBackgroundColorResource(R.color.purple_500)
-                DirectionsCriteria.PROFILE_WALKING -> walkMode.setChipBackgroundColorResource(R.color.purple_500)
+                DirectionsCriteria.PROFILE_DRIVING -> carMode.backgroundTintList = ColorStateList.valueOf(getColor(R.color.purple_500))
+                DirectionsCriteria.PROFILE_CYCLING -> cycleMode.backgroundTintList = ColorStateList.valueOf(getColor(R.color.purple_500))
+                DirectionsCriteria.PROFILE_WALKING -> walkMode.backgroundTintList = ColorStateList.valueOf(getColor(R.color.purple_500))
             }
             selectedPoint?.let { point ->
                 isCurrentLocationRequested.value?.let { locEnabled ->

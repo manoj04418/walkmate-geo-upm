@@ -16,11 +16,12 @@ class Queries {
     private var instance: FirebaseFirestore = Firebase.firestore
     private var auth: FirebaseAuth = Firebase.auth
 
-    suspend fun getUser(userId: String): User? {
+    suspend fun getUser(): User? {
         return try {
             if (auth.currentUser == null) null
             else {
-                val ref = instance.collection("users").document(userId).get().await()
+                val ref = instance.collection("users").document(auth.currentUser!!.uid)
+                    .get().await()
                 ref.toObject<User>()
             }
         } catch (e: Exception) {
