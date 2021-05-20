@@ -5,38 +5,139 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activities.MapActivity">
+    tools:context=".activities.NavigationActivity">
 
     <include
         android:id="@+id/toolbar"
-        layout="@layout/toolbar"/>
+        layout="@layout/toolbar"
+        tools:layout_editor_absoluteX="16dp"
+        tools:layout_editor_absoluteY="0dp" />
 
-    <com.mapbox.mapboxsdk.maps.MapView
-        android:id="@+id/mapView"
-        android:layout_marginTop="?attr/actionBarSize"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/layout_location"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        app:layout_constraintBottom_toBottomOf="@id/toolbar"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        app:counterEnabled="false"
+        app:errorEnabled="false"
+        app:hintEnabled="false"
+        app:layout_constraintEnd_toEndOf="@+id/text_view_location"
+        app:layout_constraintStart_toStartOf="@+id/text_view_location"
+        app:layout_constraintTop_toBottomOf="@+id/toolbar">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/edit_text_location"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search Location"
+            android:imeOptions="actionDone"
+            android:inputType="textCapSentences"
+            android:maxLength="56"
+            android:maxLines="1" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/gathered_addresses"
+        android:visibility="invisible"
+        android:layout_width="0dp"
+        android:layout_height="50dp"
+        android:layout_marginTop="8dp"
+        tools:listitem="@layout/gathered_addresses"
+        tools:itemCount="3"
+        app:layout_constraintEnd_toEndOf="@+id/layout_location"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/layout_location"
+        app:layout_constraintTop_toBottomOf="@+id/layout_location" />
+
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@+id/gathered_addresses">
+
+        <com.mapbox.mapboxsdk.maps.MapView
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/dataRoute"
+            android:layout_width="match_parent"
+            android:layout_height="70dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="80dp"
+            android:layout_marginBottom="16dp"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            app:chipBackgroundColor="@color/teal_700"
+            tools:ignore="RtlCompat" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/mode_car"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:layout_gravity="start|top"
+            android:layout_marginStart="32dp"
+            android:text="Car"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            app:chipBackgroundColor="@color/teal_500"
+            app:chipIcon="@drawable/ic_car"
+            tools:ignore="RtlCompat" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/mode_cycle"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            android:layout_gravity="center|top"
+            app:chipIcon="@drawable/ic_bicycle"
+            android:text="Cycle"
+            app:chipBackgroundColor="@color/teal_500"
+            tools:ignore="RtlCompat" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/mode_walk"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:layout_gravity="end|top"
+            android:layout_marginEnd="32dp"
+            android:text="Walk"
+            android:textAlignment="center"
+            android:textColor="@color/white"
+            app:chipBackgroundColor="@color/teal_500"
+            app:chipIcon="@drawable/ic_walk"
+            tools:ignore="RtlCompat" />
+
+    </FrameLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_location"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
+        android:backgroundTint="@color/teal_700"
         app:layout_anchorGravity="bottom|end"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:srcCompat="@drawable/ic_location"/>
+        app:srcCompat="@drawable/ic_location"
+        app:tint="@color/white"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_map_style"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:backgroundTint="@color/teal_700"
+        android:backgroundTint="@color/teal_500"
         app:layout_anchorGravity="center|end"
         app:layout_constraintBottom_toTopOf="@+id/fab_location"
         app:layout_constraintEnd_toEndOf="parent"

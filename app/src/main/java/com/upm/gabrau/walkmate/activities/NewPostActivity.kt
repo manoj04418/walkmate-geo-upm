@@ -1,6 +1,7 @@
 package com.upm.gabrau.walkmate.activities
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
@@ -22,6 +23,7 @@ import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.geometry.LatLng
+import com.mapbox.mapboxsdk.location.LocationComponent
 import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
 import com.mapbox.mapboxsdk.location.LocationComponentOptions
 import com.mapbox.mapboxsdk.location.modes.CameraMode
@@ -48,7 +50,7 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
 
     private lateinit var mapboxMap: MapboxMap
     private lateinit var circleManager: CircleManager
-
+    private var currentCircle: Circle? = null
     private var addresses: List<Address>? = arrayListOf()
     private var selectedAddress: GeoPoint? = null
 
@@ -66,15 +68,7 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         binding.gatheredAddresses.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         initAdapter()
         initFABStyle()
-
-        binding.editTextLocation.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                val inputMM = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager?
-                inputMM?.hideSoftInputFromWindow(view.windowToken, 0)
-                binding.gatheredAddresses.visibility = View.VISIBLE
-                gatheredAddresses()
-            } else false
-        }
+        initLocationEditText(view)
 
         binding.mapView.onCreate(savedInstanceState)
         binding.mapView.getMapAsync {
@@ -99,56 +93,16 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
                     .build()
 
                 locationComponent.activateLocationComponent(locationComponentActivationOptions)
-                locationComponent.isLocationComponentEnabled = false
 
                 circleManager = CircleManager(binding.mapView, mapboxMap, style)
 
-                isCurrentLocationRequested.observe(this, { isUserLocationEnabled ->
-                    if (isUserLocationEnabled) {
-                        locationComponent.cameraMode = CameraMode.TRACKING
-                        locationComponent.renderMode = RenderMode.NORMAL
-                        locationComponent.isLocationComponentEnabled = true
-
-                        locationComponent.zoomWhileTracking(15.0, 2000L)
-                    } else {
-                        locationComponent.isLocationComponentEnabled = false
-                    }
-                })
+                observeLocationEnabled(locationComponent)
             }
 
             mapboxMap.addOnMapClickListener { point -> drawCircle(point) }
         }
 
-        binding.fabLocation.setOnClickListener {
-            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            var enabled = false
-
-            try {
-                enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
-            } catch (ex: java.lang.Exception) { }
-
-
-            if (!enabled) {
-                Toast.makeText(this, "You do not have the location active!", Toast.LENGTH_SHORT).show()
-            } else {
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
-                        val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
-                        ActivityCompat.requestPermissions(this, permissions, 1)
-                    } else {
-                        val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
-                        ActivityCompat.requestPermissions(this, permissions, 1)
-                    }
-                } else {
-                    isCurrentLocationRequested.value?.let {
-                        isCurrentLocationRequested.value = isCurrentLocationRequested.value!!.not()
-                    } ?: run {
-                        isCurrentLocationRequested.value = true
-                    }
-                }
-            }
-        }
+        setUpLocationFAB()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -194,6 +148,17 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         binding.gatheredAddresses.adapter = AddressAdapter(addresses!!, this)
     }
 
+    private fun initLocationEditText(view: View) {
+        binding.editTextLocation.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                val inputMM = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager?
+                inputMM?.hideSoftInputFromWindow(view.windowToken, 0)
+                binding.gatheredAddresses.visibility = View.VISIBLE
+                gatheredAddresses()
+            } else false
+        }
+    }
+
     private fun gatheredAddresses(): Boolean {
         return try {
             val geocoder = Geocoder(this)
@@ -206,8 +171,7 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
     }
 
     private fun drawCircle(location: LatLng): Boolean {
-        circleManager.deleteAll()
-        isCurrentLocationRequested.value = false
+        currentCircle?.let { circleManager.delete(it) }
         val cameraPosition = CameraPosition.Builder()
             .zoom(if (mapboxMap.cameraPosition.zoom > 10.0) mapboxMap.cameraPosition.zoom else 10.0)
             .target(location)
@@ -218,7 +182,7 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
             .withCircleRadius(6f)
             .withLatLng(location)
 
-        circleManager.create(circleOptions)
+        currentCircle = circleManager.create(circleOptions)
         selectedAddress = GeoPoint(location.latitude, location.longitude)
         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
         return true
@@ -232,6 +196,54 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
             } else {
                 changedUI.value = Style.SATELLITE
                 binding.fabMapStyle.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_street))
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun observeLocationEnabled(locationComponent: LocationComponent) {
+        locationComponent.isLocationComponentEnabled = false
+        isCurrentLocationRequested.observe(this, { isUserLocationEnabled ->
+            if (isUserLocationEnabled) {
+                locationComponent.cameraMode = CameraMode.TRACKING
+                locationComponent.renderMode = RenderMode.NORMAL
+                locationComponent.isLocationComponentEnabled = true
+
+                locationComponent.zoomWhileTracking(15.0, 2000L)
+            } else {
+                locationComponent.isLocationComponentEnabled = false
+            }
+        })
+    }
+
+    private fun setUpLocationFAB() {
+        binding.fabLocation.setOnClickListener {
+            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            var enabled = false
+
+            try {
+                enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+            } catch (ex: java.lang.Exception) { }
+
+            if (!enabled) {
+                Toast.makeText(this, "You do not have the location active!", Toast.LENGTH_SHORT).show()
+            } else {
+                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                        val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
+                        ActivityCompat.requestPermissions(this, permissions, 1)
+                    } else {
+                        val permissions = Array(1) { Manifest.permission.ACCESS_FINE_LOCATION }
+                        ActivityCompat.requestPermissions(this, permissions, 1)
+                    }
+                } else {
+                    isCurrentLocationRequested.value?.let {
+                        isCurrentLocationRequested.value = isCurrentLocationRequested.value!!.not()
+                    } ?: run {
+                        isCurrentLocationRequested.value = true
+                    }
+                }
             }
         }
     }

@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     }
 
     override fun onItemClicked(post: Post) {
-        val intent = Intent(this, MapActivity::class.java)
+        val intent = Intent(this, NavigationActivity::class.java)
         intent.putExtra("post", post)
         startActivity(intent)
     }

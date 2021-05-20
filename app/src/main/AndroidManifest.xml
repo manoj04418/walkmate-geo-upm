@@ -25,11 +25,11 @@
             android:screenOrientation="portrait">
         </activity>
         <activity
-            android:name=".activities.NewPostActivity"
-            android:screenOrientation="portrait" >
+            android:name=".activities.NavigationActivity"
+            android:screenOrientation="portrait">
         </activity>
         <activity
-            android:name=".activities.MapActivity"
+            android:name=".activities.NewPostActivity"
             android:screenOrientation="portrait" >
         </activity>
     </application>
