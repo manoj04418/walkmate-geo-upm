@@ -63,7 +63,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMapClickListener,
-    AddressAdapter.OnAddressClicked{
+    AddressAdapter.OnAddressClicked {
 
     private val isCurrentLocationRequested: MutableLiveData<Boolean> = MutableLiveData()
     private val changedUI: MutableLiveData<String> = MutableLiveData()
@@ -140,9 +140,20 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         mapboxMap.setStyle(changedUI.value) {
             this.mapboxMap = mapboxMap
 
-            mapboxMap.cameraPosition = CameraPosition.Builder()
-                .zoom(15.0).target(LatLng(post.geoPoint?.latitude!!, post.geoPoint?.longitude!!))
-                .build()
+            if (selectedPoint == null) {
+                val p = post.geoPoint
+                selectedPoint = p?.let { point -> LatLng(point.latitude, point.longitude) }
+                mapboxMap.cameraPosition = CameraPosition.Builder()
+                    .zoom(15.0).target(selectedPoint)
+                    .build()
+            } else {
+                drawPoint(selectedPoint!!)
+                isCurrentLocationRequested.value?.let { loc ->
+                    if (loc) drawRouteWithLocation()
+                    else drawRoute(Point.fromLngLat(selectedPoint!!.longitude, selectedPoint!!.latitude),
+                        getPointFromPostAddress()!!)
+                }
+            }
 
             val locationComponentActivationOptions = LocationComponentActivationOptions
                 .builder(this, it)
@@ -159,8 +170,8 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
     }
 
     private fun setUpObservers() {
-        changedUI.observe(this, { mapboxMap?.let {
-            onMapReady(it) }
+        changedUI.observe(this, {
+            mapboxMap?.let { onMapReady(it) }
             data.visibility = View.INVISIBLE
             carMode.visibility = View.INVISIBLE
             cycleMode.visibility = View.INVISIBLE
@@ -240,11 +251,11 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
                     stop(1f, color(parseColor("#FF009688")))))),
             "mapbox-location-shadow-layer")
 
-        it.addLayerAbove(SymbolLayer(layerClick, sourceClick)
-            .withProperties(iconImage("ICON_ID")), layerRoute)
-
         it.addLayerAbove(SymbolLayer(layerOrigin, sourceOrigin)
             .withProperties(iconImage("DEST_ID")), layerRoute)
+
+        it.addLayerAbove(SymbolLayer(layerClick, sourceClick)
+            .withProperties(iconImage("ICON_ID")), layerOrigin)
     }
 
     private fun initAdapter() { addresses.adapter = AddressAdapter(gatheredAddresses!!, this) }
@@ -420,6 +431,7 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         val loc = LatLng(address.latitude, address.longitude)
         drawPoint(loc)
         drawRoute(Point.fromLngLat(loc.longitude, loc.latitude), getPointFromPostAddress()!!)
+        selectedPoint = loc
         mapboxMap?.cameraPosition = CameraPosition.Builder().zoom(12.0).target(loc).build()
     }
 }

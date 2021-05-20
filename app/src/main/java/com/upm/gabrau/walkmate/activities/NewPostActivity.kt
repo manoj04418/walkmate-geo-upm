@@ -54,7 +54,7 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
 
     private var mapboxMap: MapboxMap? = null
     private var addresses: List<Address>? = arrayListOf()
-    private var selectedAddress: GeoPoint? = null
+    private var selectedPoint: LatLng? = null
 
     private val sourceOrigin = "ORIGIN_SOURCE"
     private val layerOrigin = "ORIGIN_LAYER"
@@ -68,7 +68,7 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         setContentView(view)
 
         changedUI.value = Style.OUTDOORS
-        changedUI.observe(this, { style -> mapboxMap?.setStyle(style) })
+        changedUI.observe(this, { mapboxMap?.let { onMapReady(it) } })
 
         toolbar()
         binding.gatheredAddresses.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -91,9 +91,13 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         mapboxMap.setStyle(changedUI.value) { style ->
             this.mapboxMap = mapboxMap
 
-            mapboxMap.cameraPosition = CameraPosition.Builder()
-                .zoom(3.0).target(LatLng(40.4169019,-3.7056721))
-                .build()
+            if (selectedPoint != null) { drawMarker(selectedPoint!!, false) }
+            else {
+                selectedPoint = LatLng(40.4169019,-3.7056721)
+                mapboxMap.cameraPosition = CameraPosition.Builder()
+                    .zoom(8.0).target(selectedPoint)
+                    .build()
+            }
 
             val locationComponentActivationOptions = LocationComponentActivationOptions
                 .builder(this, style)
@@ -128,15 +132,13 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         return when(item.itemId) {
             R.id.toolbar_done -> {
                 CoroutineScope(Dispatchers.Main).launch {
-                    if (selectedAddress != null && binding.editTextTitle.text?.trim()?.isNotEmpty() == true) {
-                        selectedAddress?.let {
+                    if (selectedPoint != null && binding.editTextTitle.text?.trim()?.isNotEmpty() == true) {
+                        selectedPoint?.let {
                             binding.editTextTitle.text?.let{ title ->
-                                val post = Post(name = title.toString(),
-                                    geoPoint = GeoPoint(it.latitude, it.longitude))
+                                val post = Post(name = title.toString(), geoPoint = GeoPoint(it.latitude, it.longitude))
                                 val success = Queries().uploadPost(post)
                                 if (success) finish()
-                                else Toast.makeText(baseContext, "Something went wrong",
-                                    Toast.LENGTH_SHORT).show()
+                                else Toast.makeText(baseContext, "Something went wrong", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
@@ -183,20 +185,23 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         }
     }
 
-    private fun drawMarker(location: LatLng): Boolean {
+    private fun drawMarker(location: LatLng, moveCamera: Boolean = true): Boolean {
         mapboxMap?.let { map ->
-            val cameraPosition = CameraPosition.Builder()
-                .zoom(if (map.cameraPosition.zoom > 10.0) map.cameraPosition.zoom else 10.0)
-                .target(location)
-                .build()
-
             val origin = Point.fromLngLat(location.longitude, location.latitude)
             map.getStyle {
                 val clickPointSource = it.getSourceAs<GeoJsonSource>(sourceOrigin)
                 clickPointSource?.setGeoJson(origin)
             }
 
-            map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
+            selectedPoint = location
+
+            if (moveCamera) {
+                val cameraPosition = CameraPosition.Builder()
+                    .zoom(if (map.cameraPosition.zoom > 8.0) map.cameraPosition.zoom else 8.0)
+                    .target(location)
+                    .build()
+                map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
+            }
         }
         return true
     }
