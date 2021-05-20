@@ -1,6 +1,7 @@
 package com.upm.gabrau.walkmate.utils
 
 import android.content.Context
+import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.Toast
@@ -10,6 +11,7 @@ import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.geometry.LatLng
 import com.mapbox.mapboxsdk.maps.Style
 import com.upm.gabrau.walkmate.R
+import com.upm.gabrau.walkmate.activities.ProfileActivity
 import com.upm.gabrau.walkmate.databinding.ItemPostBinding
 import com.upm.gabrau.walkmate.firebase.Queries
 import com.upm.gabrau.walkmate.models.Post
@@ -53,16 +55,27 @@ class PostAdapter(
 
                 CoroutineScope(Dispatchers.Main).launch {
                     val user = Queries().getUser()
-                    user?.let {
-                        binding.textViewUser.text = it.name
+                    user?.let { u ->
+                        binding.textViewUser.text = u.name
                         binding.textViewUser.isSelected = true
+                        Queries().getCurrentUserId()?.let { uid ->
+                            if (uid != u.id) {
+                                binding.textViewUser.setOnClickListener {
+                                    val intent = Intent(context, ProfileActivity::class.java)
+                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    intent.putExtra("uid", u.id)
+                                    context.startActivity(intent)
+                                }
+                            }
+                        }
                     }
                 }
 
                 val c = Calendar.getInstance()
                 c.time = this?.created!!
                 val year = c.get(Calendar.YEAR).toString().substring(2, 4)
-                val date = "Created: ${c.get(Calendar.DAY_OF_MONTH)}/${c.get(Calendar.MONTH)+1}/$year"
+                val date = "Created: ${c.get(Calendar.DAY_OF_MONTH)}/${c.get(Calendar.MONTH)+1}/$year" +
+                        " at ${c.get(Calendar.HOUR_OF_DAY)}:${c.get(Calendar.MINUTE)}"
                 binding.textViewCreated.text = date
 
                 this.geoPoint?.let { geo ->

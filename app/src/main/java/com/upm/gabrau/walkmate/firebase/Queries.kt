@@ -16,11 +16,12 @@ class Queries {
     private var instance: FirebaseFirestore = Firebase.firestore
     private var auth: FirebaseAuth = Firebase.auth
 
-    suspend fun getUser(): User? {
+    suspend fun getUser(userId: String? = null): User? {
         return try {
             if (auth.currentUser == null) null
             else {
-                val ref = instance.collection("users").document(auth.currentUser!!.uid)
+                val ref = instance.collection("users")
+                    .document(userId ?: auth.currentUser!!.uid)
                     .get().await()
                 ref.toObject<User>()
             }
@@ -29,7 +30,9 @@ class Queries {
         }
     }
 
-    fun isUserSessionActive() = FirebaseAuth.getInstance().currentUser != null
+    fun isUserSessionActive() = auth.currentUser != null
+
+    fun getCurrentUserId(): String? = if (isUserSessionActive()) auth.currentUser!!.uid else null
 
     suspend fun createUser(email: String, password: String, user: User): User? {
         return try {
@@ -43,11 +46,12 @@ class Queries {
         }
     }
 
-    suspend fun getUserPosts(): ArrayList<Post?>? {
+    suspend fun getUserPosts(userId: String? = null): ArrayList<Post?>? {
         return try {
             if (auth.currentUser == null) null
             else {
-                val ref = instance.collection("posts").document(auth.currentUser!!.uid)
+                val ref = instance.collection("posts")
+                    .document(userId ?: auth.currentUser!!.uid)
                     .collection("userPosts").get().await()
                 val posts: ArrayList<Post?> = arrayListOf()
                 ref.documents.forEach { post ->
@@ -88,13 +92,54 @@ class Queries {
         }
     }
 
+    suspend fun getNumberOfFollowers(userId: String? = null): Int {
+        return try {
+            if (auth.currentUser == null) 0
+            else {
+                val ref = instance.collection("follow_system")
+                    .whereEqualTo("followee", userId ?: auth.currentUser!!.uid).get().await()
+                ref.size()
+            }
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun getNumberOfFollowing(userId: String? = null): Int {
+        return try {
+            if (auth.currentUser == null) 0
+            else {
+                val ref = instance.collection("follow_system")
+                    .whereEqualTo("follower", userId ?: auth.currentUser!!.uid).get().await()
+                ref.size()
+            }
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun isUserFollowingUser(otherUser: String): Boolean {
+        return try {
+            if (auth.currentUser == null) false
+            else {
+                val id = "${auth.currentUser!!.uid}_$otherUser"
+                val ref = instance.collection("follow_system").document(id).get().await()
+                ref.exists()
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     suspend fun follow(toBeFollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
             else {
-                instance.collection("following").document(auth.currentUser!!.uid)
-                    .collection("userFollowing").document(toBeFollowed)
-                    .set("").await()
+                val id = "${auth.currentUser!!.uid}_$toBeFollowed"
+                instance.collection("follow_system").document(id).set({
+                        "followee" to toBeFollowed
+                        "follower" to auth.currentUser!!.uid
+                    }).await()
                 true
             }
         } catch (e: Exception) {
@@ -106,9 +151,8 @@ class Queries {
         return try {
             if (auth.currentUser == null) false
             else {
-                instance.collection("following").document(auth.currentUser!!.uid)
-                    .collection("userFollowing").document(toBeUnfollowed)
-                    .delete().await()
+                val id = "${auth.currentUser!!.uid}_$toBeUnfollowed"
+                instance.collection("follow_system").document(id).delete().await()
                 true
             }
         } catch (e: Exception) {
@@ -121,8 +165,8 @@ class Queries {
             if (auth.currentUser == null) null
             else {
                 val posts: ArrayList<Post?> = arrayListOf()
-                val users = instance.collection("following").document(auth.currentUser!!.uid)
-                    .collection("userFollowing").get().await()
+                val users = instance.collection("follow_system")
+                    .whereEqualTo("follower", auth.currentUser!!.uid).get().await()
                 users.documents.forEach { user ->
                     val userPosts = instance.collection("posts").document(user.id)
                         .collection("userPosts").orderBy("created", Query.Direction.DESCENDING)

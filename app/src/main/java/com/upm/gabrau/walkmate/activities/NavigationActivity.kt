@@ -11,9 +11,11 @@ import android.location.Address
 import android.location.Geocoder
 import android.location.LocationManager
 import android.os.Bundle
+import android.view.Menu
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -200,6 +202,7 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
 
     private fun toolbar() {
         toolbar = findViewById(R.id.toolbar)
+        findViewById<ImageView>(R.id.backpack).visibility = View.GONE
         setSupportActionBar(toolbar)
         supportActionBar?.title = post.name
         supportActionBar?.setDisplayHomeAsUpEnabled(true)

@@ -26,8 +26,6 @@ class LogInActivity : AppCompatActivity() {
             val view = binding.root
             setContentView(view)
 
-            val activity = this
-
             binding.createUserButton.setOnClickListener {
                 if (binding.editTextName.text?.trim()?.isNotEmpty() == true &&
                     binding.editTextEmail.text?.trim()?.isNotEmpty() == true &&

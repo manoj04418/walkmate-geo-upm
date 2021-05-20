@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -153,8 +154,9 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
     }
 
     private fun toolbar() {
+        findViewById<ImageView>(R.id.backpack).visibility = View.GONE
         setSupportActionBar(binding.toolbar.root)
-        supportActionBar?.title = "New Post"
+        supportActionBar?.title = "New Location"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
         binding.toolbar.root.setNavigationOnClickListener { onBackPressed() }
