@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.firestore.GeoPoint
+import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
@@ -29,9 +30,12 @@ import com.mapbox.mapboxsdk.location.LocationComponentOptions
 import com.mapbox.mapboxsdk.location.modes.CameraMode
 import com.mapbox.mapboxsdk.location.modes.RenderMode
 import com.mapbox.mapboxsdk.maps.MapboxMap
+import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
-import com.mapbox.mapboxsdk.plugins.annotation.*
-import com.mapbox.mapboxsdk.utils.ColorUtils
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage
+import com.mapbox.mapboxsdk.style.layers.SymbolLayer
+import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import com.mapbox.mapboxsdk.utils.BitmapUtils
 import com.upm.gabrau.walkmate.databinding.ActivityNewPostBinding
 import com.upm.gabrau.walkmate.R
 import com.upm.gabrau.walkmate.firebase.Queries
@@ -41,18 +45,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
-    ActivityCompat.OnRequestPermissionsResultCallback {
+class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMapClickListener,
+    AddressAdapter.OnAddressClicked {
 
     private lateinit var binding: ActivityNewPostBinding
     private val isCurrentLocationRequested: MutableLiveData<Boolean> = MutableLiveData()
     private val changedUI: MutableLiveData<String> = MutableLiveData()
 
-    private lateinit var mapboxMap: MapboxMap
-    private lateinit var circleManager: CircleManager
-    private var currentCircle: Circle? = null
+    private var mapboxMap: MapboxMap? = null
     private var addresses: List<Address>? = arrayListOf()
     private var selectedAddress: GeoPoint? = null
+
+    private val sourceOrigin = "ORIGIN_SOURCE"
+    private val layerOrigin = "ORIGIN_LAYER"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,6 +68,7 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         setContentView(view)
 
         changedUI.value = Style.OUTDOORS
+        changedUI.observe(this, { style -> mapboxMap?.setStyle(style) })
 
         toolbar()
         binding.gatheredAddresses.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
@@ -71,38 +77,46 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         initLocationEditText(view)
 
         binding.mapView.onCreate(savedInstanceState)
-        binding.mapView.getMapAsync {
-            this.mapboxMap = it
-            changedUI.observe(this, { style ->
-                mapboxMap.setStyle(style)
-            })
+        binding.mapView.getMapAsync(this)
+
+        setUpLocationFAB()
+    }
+
+    override fun onMapReady(mapboxMap: MapboxMap) {
+        val locationComponent = mapboxMap.locationComponent
+        val locationComponentOptions = LocationComponentOptions.builder(this)
+            .pulseEnabled(true)
+            .build()
+
+        mapboxMap.setStyle(changedUI.value) { style ->
+            this.mapboxMap = mapboxMap
 
             mapboxMap.cameraPosition = CameraPosition.Builder()
                 .zoom(3.0).target(LatLng(40.4169019,-3.7056721))
                 .build()
 
-            val locationComponent = mapboxMap.locationComponent
-            val locationComponentOptions = LocationComponentOptions.builder(this)
-                .pulseEnabled(true)
+            val locationComponentActivationOptions = LocationComponentActivationOptions
+                .builder(this, style)
+                .locationComponentOptions(locationComponentOptions)
                 .build()
 
-            mapboxMap.setStyle(changedUI.value) { style ->
-                val locationComponentActivationOptions = LocationComponentActivationOptions
-                    .builder(this, style)
-                    .locationComponentOptions(locationComponentOptions)
-                    .build()
+            locationComponent.activateLocationComponent(locationComponentActivationOptions)
+            observeLocationEnabled(locationComponent)
 
-                locationComponent.activateLocationComponent(locationComponentActivationOptions)
+            style.addSource(GeoJsonSource(sourceOrigin))
 
-                circleManager = CircleManager(binding.mapView, mapboxMap, style)
+            val marker = ContextCompat.getDrawable(this, R.drawable.mapbox_marker_icon_default)
+            style.addImage("ICON_ID", BitmapUtils.getBitmapFromDrawable(marker)!!)
 
-                observeLocationEnabled(locationComponent)
-            }
+            style.addLayer(SymbolLayer(layerOrigin, sourceOrigin).withProperties(iconImage("ICON_ID")))
 
-            mapboxMap.addOnMapClickListener { point -> drawCircle(point) }
+            mapboxMap.addOnMapClickListener(this)
         }
+    }
 
-        setUpLocationFAB()
+    override fun onMapClick(point: LatLng): Boolean {
+        drawMarker(LatLng(point.latitude, point.longitude))
+        return true
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -144,9 +158,7 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         binding.toolbar.root.setNavigationOnClickListener { onBackPressed() }
     }
 
-    private fun initAdapter() {
-        binding.gatheredAddresses.adapter = AddressAdapter(addresses!!, this)
-    }
+    private fun initAdapter() { binding.gatheredAddresses.adapter = AddressAdapter(addresses!!, this) }
 
     private fun initLocationEditText(view: View) {
         binding.editTextLocation.setOnEditorActionListener { _, actionId, _ ->
@@ -154,7 +166,8 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
                 val inputMM = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager?
                 inputMM?.hideSoftInputFromWindow(view.windowToken, 0)
                 binding.gatheredAddresses.visibility = View.VISIBLE
-                gatheredAddresses()
+                CoroutineScope(Dispatchers.Main).launch { gatheredAddresses() }
+                true
             } else false
         }
     }
@@ -170,21 +183,21 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         }
     }
 
-    private fun drawCircle(location: LatLng): Boolean {
-        currentCircle?.let { circleManager.delete(it) }
-        val cameraPosition = CameraPosition.Builder()
-            .zoom(if (mapboxMap.cameraPosition.zoom > 10.0) mapboxMap.cameraPosition.zoom else 10.0)
-            .target(location)
-            .build()
+    private fun drawMarker(location: LatLng): Boolean {
+        mapboxMap?.let { map ->
+            val cameraPosition = CameraPosition.Builder()
+                .zoom(if (map.cameraPosition.zoom > 10.0) map.cameraPosition.zoom else 10.0)
+                .target(location)
+                .build()
 
-        val circleOptions = CircleOptions()
-            .withCircleColor(ColorUtils.colorToRgbaString(resources.getColor(R.color.purple_500, resources.newTheme())))
-            .withCircleRadius(6f)
-            .withLatLng(location)
+            val origin = Point.fromLngLat(location.longitude, location.latitude)
+            map.getStyle {
+                val clickPointSource = it.getSourceAs<GeoJsonSource>(sourceOrigin)
+                clickPointSource?.setGeoJson(origin)
+            }
 
-        currentCircle = circleManager.create(circleOptions)
-        selectedAddress = GeoPoint(location.latitude, location.longitude)
-        mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
+            map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition), 2000)
+        }
         return true
     }
 
@@ -265,7 +278,5 @@ class NewPostActivity : AppCompatActivity(), AddressAdapter.OnAddressClicked,
         }
     }
 
-    override fun onAddressClicked(address: Address) {
-        drawCircle(LatLng(address.latitude, address.longitude))
-    }
+    override fun onAddressClicked(address: Address) { drawMarker(LatLng(address.latitude, address.longitude)) }
 }

@@ -41,19 +41,11 @@ import com.mapbox.mapboxsdk.maps.MapView
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback
 import com.mapbox.mapboxsdk.maps.Style
-import com.mapbox.mapboxsdk.style.expressions.Expression.color
-import com.mapbox.mapboxsdk.style.expressions.Expression.interpolate
-import com.mapbox.mapboxsdk.style.expressions.Expression.lineProgress
-import com.mapbox.mapboxsdk.style.expressions.Expression.linear
-import com.mapbox.mapboxsdk.style.expressions.Expression.stop
+import com.mapbox.mapboxsdk.style.expressions.Expression.*
 import com.mapbox.mapboxsdk.style.layers.LineLayer
 import com.mapbox.mapboxsdk.style.layers.Property.LINE_CAP_ROUND
 import com.mapbox.mapboxsdk.style.layers.Property.LINE_JOIN_ROUND
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory.iconImage
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineCap
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineGradient
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineJoin
-import com.mapbox.mapboxsdk.style.layers.PropertyFactory.lineWidth
+import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.layers.SymbolLayer
 import com.mapbox.mapboxsdk.style.sources.GeoJsonOptions
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
@@ -65,6 +57,9 @@ import com.mapbox.navigation.core.directions.session.RoutesRequestCallback
 import com.upm.gabrau.walkmate.R
 import com.upm.gabrau.walkmate.models.Post
 import com.upm.gabrau.walkmate.utils.AddressAdapter
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMapClickListener,
@@ -262,7 +257,8 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
                 val inputMM = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager?
                 inputMM?.hideSoftInputFromWindow(window.decorView.rootView.windowToken, 0)
                 addresses.visibility = View.VISIBLE
-                gatheredAddresses()
+                CoroutineScope(Dispatchers.Main).launch { gatheredAddresses() }
+                true
             } else false
         }
     }
