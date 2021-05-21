@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
+import androidx.lifecycle.MutableLiveData
 import com.upm.gabrau.walkmate.databinding.ActivityLoginBinding
 import com.upm.gabrau.walkmate.firebase.Queries
 import com.upm.gabrau.walkmate.models.User
@@ -15,6 +17,7 @@ import java.util.regex.Pattern
 
 class LogInActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
+    private val changedUI: MutableLiveData<Boolean> = MutableLiveData()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,23 +29,64 @@ class LogInActivity : AppCompatActivity() {
             val view = binding.root
             setContentView(view)
 
-            binding.createUserButton.setOnClickListener {
-                if (binding.editTextName.text?.trim()?.isNotEmpty() == true &&
-                    binding.editTextEmail.text?.trim()?.isNotEmpty() == true &&
-                    isEmailValid(binding.editTextEmail.text.toString()) &&
-                    binding.editTextPassword.text?.trim()?.isNotEmpty() == true) {
-                    CoroutineScope(Dispatchers.Main).launch {
-                        val user = User(name = binding.editTextName.text.toString())
-                        val createdUser = Queries().createUser(binding.editTextEmail.text.toString(),
-                            binding.editTextPassword.text.toString(), user)
-                        if (createdUser != null) {
-                            startActivity(Intent(baseContext, MainActivity::class.java))
-                        } else {
-                            Toast.makeText(baseContext, "Algo ha salido mal", Toast.LENGTH_SHORT).show()
+            changedUI.value = false
+
+            initButton()
+            binding.textViewSwitch.setOnClickListener { changedUI.value = !changedUI.value!! }
+
+            changedUI.observe(this, { changed ->
+                if (changed) {
+                    binding.createUserButton.text = "Log In"
+                    binding.layoutName.isVisible = false
+                    binding.textViewUsername.isVisible = false
+                    binding.textViewSwitch.text = "Register"
+                } else {
+                    binding.createUserButton.text = "Create User"
+                    binding.layoutName.isVisible = true
+                    binding.textViewUsername.isVisible = true
+                    binding.textViewSwitch.text = "Login"
+                }
+            })
+        }
+    }
+
+    private fun initButton() {
+        binding.createUserButton.setOnClickListener {
+            changedUI.value?.let {
+                if (it) {
+                    if (binding.editTextEmail.text?.trim()?.isNotEmpty() == true &&
+                        isEmailValid(binding.editTextEmail.text.toString()) &&
+                        binding.editTextPassword.text?.trim()?.isNotEmpty() == true) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val success = Queries().signUser(binding.editTextEmail.text.toString(),
+                                binding.editTextPassword.text.toString())
+                            if (success) {
+                                startActivity(Intent(baseContext, MainActivity::class.java))
+                            } else {
+                                Toast.makeText(baseContext, "Something went wrong", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    } else {
+                        Toast.makeText(this, "You must complete the form", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(this, "Debes completar el nombre de usuario", Toast.LENGTH_SHORT).show()
+                    if (binding.editTextName.text?.trim()?.isNotEmpty() == true &&
+                        binding.editTextEmail.text?.trim()?.isNotEmpty() == true &&
+                        isEmailValid(binding.editTextEmail.text.toString()) &&
+                        binding.editTextPassword.text?.trim()?.isNotEmpty() == true) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            val user = User(name = binding.editTextName.text.toString())
+                            val createdUser = Queries().createUser(binding.editTextEmail.text.toString(),
+                                binding.editTextPassword.text.toString(), user)
+                            if (createdUser != null) {
+                                startActivity(Intent(baseContext, MainActivity::class.java))
+                            } else {
+                                Toast.makeText(baseContext, "Something went wrong", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        Toast.makeText(this, "You must complete the form", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }

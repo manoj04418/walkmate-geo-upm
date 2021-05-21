@@ -126,6 +126,7 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.toolbar_menu, menu)
+        menu?.findItem(R.id.toolbar_logout)?.isVisible = false
         return true
     }
 

@@ -134,6 +134,13 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         mapboxNavigation = MapboxNavigation(mapboxNavigationOptions)
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.toolbar_menu, menu)
+        menu?.findItem(R.id.toolbar_done)?.isVisible = false
+        menu?.findItem(R.id.toolbar_logout)?.isVisible = false
+        return true
+    }
+
     override fun onMapReady(mapboxMap: MapboxMap) {
         val locationComponent = mapboxMap.locationComponent
         val locationComponentOptions = LocationComponentOptions.builder(this)

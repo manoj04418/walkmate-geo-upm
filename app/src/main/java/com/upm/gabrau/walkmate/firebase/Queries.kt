@@ -30,6 +30,8 @@ class Queries {
         }
     }
 
+    fun logOut() { if (auth.currentUser != null) auth.signOut() }
+
     fun isUserSessionActive() = auth.currentUser != null
 
     fun getCurrentUserId(): String? = if (isUserSessionActive()) auth.currentUser!!.uid else null
@@ -43,6 +45,15 @@ class Queries {
             }
         } catch (e: Exception) {
             null
+        }
+    }
+
+    suspend fun signUser(email: String, password: String): Boolean {
+        return try {
+            auth.signInWithEmailAndPassword(email, password).await()
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

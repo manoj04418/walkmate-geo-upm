@@ -2,9 +2,12 @@ package com.upm.gabrau.walkmate.activities
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.upm.gabrau.walkmate.R
@@ -55,6 +58,25 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         binding.fabUserAdd.setOnClickListener{
             val intent = Intent(this, NewPostActivity::class.java)
             startActivity(intent)
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.toolbar_menu, menu)
+        menu?.findItem(R.id.toolbar_done)?.isVisible = false
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId) {
+            R.id.toolbar_logout -> {
+                Queries().logOut()
+                val intent = Intent(baseContext, LogInActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                true
+            }
+            else -> true
         }
     }
 
