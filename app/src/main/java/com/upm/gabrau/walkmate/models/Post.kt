@@ -10,10 +10,12 @@ import java.util.*
 class Post(
     @DocumentId var id: String? = "",
     @PropertyName("name") var name: String? = "",
+    @PropertyName("creator") var creator: String? = "",
     @PropertyName("geopoint") var geoPoint: GeoPoint? = GeoPoint(0.0, 0.0),
     @PropertyName("created") var created: Date? = Calendar.getInstance().time,
 ): Parcelable {
     constructor(parcel: Parcel) : this (
+        parcel.readString(),
         parcel.readString(),
         parcel.readString(),
         parcel.readGeoPoint(),
@@ -23,6 +25,7 @@ class Post(
     fun toMap(): Map<String, Any?> {
         return hashMapOf(
             "name" to name,
+            "creator" to creator,
             "geopoint" to geoPoint,
             "created" to created
         )
@@ -31,6 +34,7 @@ class Post(
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeString(id)
         parcel.writeString(name)
+        parcel.writeString(creator)
         parcel.writeGeoPoint(geoPoint)
         parcel.writeDate(created)
     }

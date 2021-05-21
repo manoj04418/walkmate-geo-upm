@@ -6,6 +6,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -23,9 +24,9 @@ import kotlinx.coroutines.launch
 class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     private lateinit var binding: ActivityProfileBinding
     private var posts = arrayListOf<Post?>()
+    private val isFollowing: MutableLiveData<Boolean> = MutableLiveData()
 
     private lateinit var profileUid: String
-    private var isFollowing: Boolean = false
     private var isCurrentUser: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,6 +37,7 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         setContentView(view)
 
         profileUid = intent.getStringExtra("uid")!!
+        isFollowing.value = false
 
         toolbar()
         initFollowerCounts()
@@ -43,12 +45,17 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         binding.recyclerViewUserPosts.layoutManager = LinearLayoutManager(baseContext)
 
         CoroutineScope(Dispatchers.Main).launch {
-            isFollowing = Queries().isUserFollowingUser(profileUid)
+            isFollowing.value = Queries().isUserFollowingUser(profileUid)
             Queries().getCurrentUserId()?.let { uid ->
                 isCurrentUser = profileUid == uid
                 initFollowButton()
             }
         }
+
+        isFollowing.observe(this, {
+            if (it) binding.followButton.text = "UNFOLLOW"
+            else binding.followButton.text = "FOLLOW"
+        })
 
         binding.pullToRefreshUsers.setOnRefreshListener {
             updateList()
@@ -107,12 +114,15 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     private fun initFollowButton() {
         if (isCurrentUser) binding.followButton.visibility = View.INVISIBLE
         else {
-            binding.followButton.visibility = View.VISIBLE
-            binding.followButton.setOnClickListener {
-                CoroutineScope(Dispatchers.Main).launch {
-                    val q = Queries()
-                    if (isFollowing) q.unfollow(profileUid)
-                    else q.follow(profileUid)
+            isFollowing.value?.let { f ->
+                binding.followButton.visibility = View.VISIBLE
+                binding.followButton.setOnClickListener {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        val q = Queries()
+                        if (f) q.unfollow(profileUid)
+                        else q.follow(profileUid)
+                        isFollowing.value = !f
+                    }
                 }
             }
         }
@@ -122,15 +132,19 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         val activity = this
         CoroutineScope(Dispatchers.Main).launch {
             val p = Queries().getUserPosts(profileUid)
-            if (p != null) posts = p
-            val adapter = PostAdapter(baseContext, posts, activity)
-            binding.recyclerViewUserPosts.adapter = adapter
+            if (p != null) {
+                posts = p
+                val adapter = PostAdapter(baseContext, posts, activity)
+                binding.recyclerViewUserPosts.adapter = adapter
 
-            if (isCurrentUser) {
-                val swipeHelper = ItemTouchHelper(
-                    SwipeController(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, adapter)
-                )
-                swipeHelper.attachToRecyclerView(binding.recyclerViewUserPosts)
+                if (isCurrentUser) {
+                    val swipeHelper = ItemTouchHelper(
+                        SwipeController(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, adapter)
+                    )
+                    swipeHelper.attachToRecyclerView(binding.recyclerViewUserPosts)
+                }
+            } else {
+                Toast.makeText(baseContext, "Posts could not be retrieved", Toast.LENGTH_SHORT).show()
             }
         }
     }

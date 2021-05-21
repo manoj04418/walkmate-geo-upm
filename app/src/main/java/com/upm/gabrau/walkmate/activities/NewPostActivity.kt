@@ -137,7 +137,10 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
                     if (selectedPoint != null && binding.editTextTitle.text?.trim()?.isNotEmpty() == true) {
                         selectedPoint?.let {
                             binding.editTextTitle.text?.let{ title ->
-                                val post = Post(name = title.toString(), geoPoint = GeoPoint(it.latitude, it.longitude))
+                                val post = Post(
+                                    name = title.toString(),
+                                    creator = Queries().getCurrentUserId(),
+                                    geoPoint = GeoPoint(it.latitude, it.longitude))
                                 val success = Queries().uploadPost(post)
                                 if (success) finish()
                                 else Toast.makeText(baseContext, "Something went wrong", Toast.LENGTH_SHORT).show()

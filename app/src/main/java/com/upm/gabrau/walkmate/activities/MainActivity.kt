@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.upm.gabrau.walkmate.R
@@ -64,9 +65,13 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         val activity = this
         CoroutineScope(Dispatchers.Main).launch {
             val p = Queries().getUserFeed()
-            if (p != null) posts = p
-            val adapter = PostAdapter(baseContext, posts, activity)
-            binding.recyclerViewPosts.adapter = adapter
+            if (p != null) {
+                posts = p
+                val adapter = PostAdapter(baseContext, posts, activity)
+                binding.recyclerViewPosts.adapter = adapter
+            } else {
+                Toast.makeText(baseContext, "Posts could not be retrieved", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

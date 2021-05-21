@@ -50,35 +50,34 @@ class PostAdapter(
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         with(holder) {
             with(postList[position]) {
-                binding.textViewTitle.text = this?.name
+                val post = this
+                binding.textViewTitle.text = post?.name
                 binding.textViewTitle.isSelected = true
 
                 CoroutineScope(Dispatchers.Main).launch {
-                    val user = Queries().getUser()
+                    val user = Queries().getUser(post?.creator)
                     user?.let { u ->
                         binding.textViewUser.text = u.name
                         binding.textViewUser.isSelected = true
-                        Queries().getCurrentUserId()?.let { uid ->
-                            if (uid != u.id) {
-                                binding.textViewUser.setOnClickListener {
-                                    val intent = Intent(context, ProfileActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    intent.putExtra("uid", u.id)
-                                    context.startActivity(intent)
-                                }
+                        if (post?.creator != Queries().getCurrentUserId()) {
+                            binding.textViewUser.setOnClickListener {
+                                val intent = Intent(context, ProfileActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                intent.putExtra("uid", u.id)
+                                context.startActivity(intent)
                             }
                         }
                     }
                 }
 
                 val c = Calendar.getInstance()
-                c.time = this?.created!!
+                c.time = post?.created!!
                 val year = c.get(Calendar.YEAR).toString().substring(2, 4)
                 val date = "Created: ${c.get(Calendar.DAY_OF_MONTH)}/${c.get(Calendar.MONTH)+1}/$year" +
                         " at ${c.get(Calendar.HOUR_OF_DAY)}:${c.get(Calendar.MINUTE)}"
                 binding.textViewCreated.text = date
 
-                this.geoPoint?.let { geo ->
+                post.geoPoint?.let { geo ->
                     val latLng = LatLng(geo.latitude,geo.longitude)
                     binding.postMap.getMapAsync { mapboxMap ->
                         val uiSettings = mapboxMap.uiSettings
@@ -91,7 +90,7 @@ class PostAdapter(
                 }
 
                 holder.itemView.setOnClickListener{
-                    itemClickListener.onItemClicked(this)
+                    itemClickListener.onItemClicked(post)
                 }
             }
         }

@@ -62,8 +62,8 @@ class Queries {
             if (auth.currentUser == null) null
             else {
                 val ref = instance.collection("posts")
-                    .document(userId ?: auth.currentUser!!.uid)
-                    .collection("userPosts").get().await()
+                    .whereEqualTo("creator", userId ?: auth.currentUser!!.uid)
+                    .get().await()
                 val posts: ArrayList<Post?> = arrayListOf()
                 ref.documents.forEach { post ->
                     posts.add(post.toObject<Post>())
@@ -79,9 +79,7 @@ class Queries {
         return try {
             if (auth.currentUser == null) false
             else {
-                instance.collection("posts").document(auth.currentUser!!.uid)
-                    .collection("userPosts").document()
-                    .set(post.toMap()).await()
+                instance.collection("posts").document().set(post.toMap()).await()
                 true
             }
         } catch (e: Exception) {
@@ -93,9 +91,7 @@ class Queries {
         return try {
             if (auth.currentUser == null) false
             else {
-                instance.collection("posts").document(auth.currentUser!!.uid)
-                    .collection("userPosts").document(post.id!!)
-                    .delete().await()
+                instance.collection("posts").document(post.id!!).delete().await()
                 true
             }
         } catch (e: Exception) {
@@ -142,6 +138,7 @@ class Queries {
         }
     }
 
+    // TODO: Test
     suspend fun follow(toBeFollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -158,6 +155,7 @@ class Queries {
         }
     }
 
+    // TODO: Test
     suspend fun unfollow(toBeUnfollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -178,15 +176,20 @@ class Queries {
                 val posts: ArrayList<Post?> = arrayListOf()
                 val users = instance.collection("follow_system")
                     .whereEqualTo("follower", auth.currentUser!!.uid).get().await()
-                users.documents.forEach { user ->
-                    val userPosts = instance.collection("posts").document(user.id)
-                        .collection("userPosts").orderBy("created", Query.Direction.DESCENDING)
-                        .limit(3).get().await()
-                    userPosts.documents.forEach { post ->
-                        posts.add(post.toObject<Post>())
+                if (users.isEmpty) null
+                else {
+                    users.documents.forEach { user ->
+                        val id = user.get("followee").toString()
+                        val userPosts = instance.collection("posts")
+                            .whereEqualTo("creator", id)
+                            .orderBy("created", Query.Direction.DESCENDING)
+                            .limit(3).get().await()
+                        userPosts.documents.forEach { post ->
+                            posts.add(post.toObject<Post>())
+                        }
                     }
+                    posts
                 }
-                posts
             }
         } catch (e: Exception) {
             null
