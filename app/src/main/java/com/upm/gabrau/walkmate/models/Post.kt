@@ -31,6 +31,22 @@ class Post(
         )
     }
 
+    override fun equals(other: Any?): Boolean {
+        val post = other as Post
+        return id == post.id && name == post.name &&
+            geoPoint == post.geoPoint && created == post.created &&
+            creator == post.creator
+    }
+
+    override fun hashCode(): Int {
+        var result = id?.hashCode() ?: 0
+        result = 31 * result + (name?.hashCode() ?: 0)
+        result = 31 * result + (creator?.hashCode() ?: 0)
+        result = 31 * result + (geoPoint?.hashCode() ?: 0)
+        result = 31 * result + (created?.hashCode() ?: 0)
+        return result
+    }
+
     override fun writeToParcel(parcel: Parcel, flags: Int) {
         parcel.writeString(id)
         parcel.writeString(name)

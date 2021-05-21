@@ -38,12 +38,14 @@ class PostAdapter(
 
     fun removePost(position: Int) {
         CoroutineScope(Dispatchers.Main).launch {
-            val success = Queries().removePost(postList[position]!!)
-            if (success) {
-                postList.removeAt(position)
-                notifyItemRemoved(position)
+            postList[position]?.let {
+                val success = Queries().removePost(it)
+                if (success) {
+                    postList.removeAt(position)
+                    notifyItemRemoved(position)
+                }
+                else Toast.makeText(context, "Could not remove post", Toast.LENGTH_SHORT).show()
             }
-            else Toast.makeText(context, "Could not remove post", Toast.LENGTH_SHORT).show()
         }
     }
 

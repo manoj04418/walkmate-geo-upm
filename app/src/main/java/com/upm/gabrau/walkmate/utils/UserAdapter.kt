@@ -4,11 +4,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.upm.gabrau.walkmate.databinding.ItemUserBinding
-import com.upm.gabrau.walkmate.firebase.Queries
 import com.upm.gabrau.walkmate.models.User
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.*
 
 class UserAdapter(private val postList: ArrayList<User?>, private val itemClickListener: OnItemClickListener) :
@@ -24,14 +20,7 @@ class UserAdapter(private val postList: ArrayList<User?>, private val itemClickL
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         with(holder) {
             with(postList[position]) {
-                val user = this
-                CoroutineScope(Dispatchers.Main).launch {
-                    if (user?.id == Queries().getCurrentUserId()) {
-                        postList.removeAt(position)
-                        notifyItemRemoved(position)
-                    }
-                }
-                binding.username.text = user?.name
+                binding.username.text = this?.name
             }
         }
 

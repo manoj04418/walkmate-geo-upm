@@ -201,9 +201,10 @@ class Queries {
                         val userPosts = instance.collection("posts")
                             .whereEqualTo("creator", id)
                             .orderBy("created", Query.Direction.DESCENDING)
-                            .limit(3).get().await()
+                            .get().await()
                         userPosts.documents.forEach { post ->
-                            posts.add(post.toObject<Post>())
+                            val p = post.toObject<Post>()
+                            if (!posts.contains(p)) posts.add(p)
                         }
                     }
                     posts
