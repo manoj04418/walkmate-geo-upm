@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -35,14 +36,17 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         binding.recyclerViewPosts.layoutManager = LinearLayoutManager(baseContext)
 
         binding.pullToRefresh.setOnRefreshListener {
+            binding.pullToRefresh.isRefreshing = true
             updateList()
             binding.pullToRefresh.isRefreshing = false
         }
 
-        binding.fab.setOnClickListener{
+        binding.fab.setOnClickListener {
             val intent = Intent(this, NewPostActivity::class.java)
             startActivity(intent)
         }
+
+        binding.refreshOnEmpty.setOnClickListener { updateList() }
 
         findViewById<ImageView>(R.id.backpack).setOnClickListener {
             CoroutineScope(Dispatchers.Main).launch {
@@ -77,13 +81,17 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         val activity = this
         CoroutineScope(Dispatchers.Main).launch {
             val p = Queries().getUserFeed()
+            lateinit var adapter: PostAdapter
             if (p != null) {
+                binding.refreshOnEmpty.visibility = View.INVISIBLE
                 posts = p
-                val adapter = PostAdapter(baseContext, posts, activity)
-                binding.recyclerViewPosts.adapter = adapter
+                adapter = PostAdapter(baseContext, posts, activity)
             } else {
+                binding.refreshOnEmpty.visibility = View.VISIBLE
+                adapter = PostAdapter(baseContext, arrayListOf(), activity)
                 Toast.makeText(baseContext, "Posts could not be retrieved", Toast.LENGTH_SHORT).show()
             }
+            binding.recyclerViewPosts.adapter = adapter
         }
     }
 

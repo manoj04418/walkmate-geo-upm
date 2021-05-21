@@ -53,8 +53,8 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         }
 
         isFollowing.observe(this, {
-            if (it) binding.followButton.text = "UNFOLLOW"
-            else binding.followButton.text = "FOLLOW"
+            binding.followButton.text = if (it) "UNFOLLOW" else "FOLLOW"
+            initFollowerCounts()
         })
 
         binding.pullToRefreshUsers.setOnRefreshListener {
@@ -115,15 +115,15 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     private fun initFollowButton() {
         if (isCurrentUser) binding.followButton.visibility = View.INVISIBLE
         else {
-            isFollowing.value?.let { f ->
-                binding.followButton.visibility = View.VISIBLE
-                binding.followButton.setOnClickListener {
-                    CoroutineScope(Dispatchers.Main).launch {
+            binding.followButton.visibility = View.VISIBLE
+            binding.followButton.setOnClickListener {
+                CoroutineScope(Dispatchers.Main).launch {
+                    isFollowing.value?.let { f ->
                         val q = Queries()
                         if (f) q.unfollow(profileUid)
                         else q.follow(profileUid)
-                        isFollowing.value = !f
                     }
+                    isFollowing.value = !isFollowing.value!!
                 }
             }
         }

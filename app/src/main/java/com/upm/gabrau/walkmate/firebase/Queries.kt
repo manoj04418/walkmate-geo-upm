@@ -158,16 +158,15 @@ class Queries {
         }
     }
 
-    // TODO: Test
     suspend fun follow(toBeFollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
             else {
                 val id = "${auth.currentUser!!.uid}_$toBeFollowed"
-                instance.collection("follow_system").document(id).set({
-                        "followee" to toBeFollowed
-                        "follower" to auth.currentUser!!.uid
-                    }).await()
+                instance.collection("follow_system").document(id).set(mapOf(
+                    "followee" to toBeFollowed,
+                    "follower" to auth.currentUser!!.uid
+                )).await()
                 true
             }
         } catch (e: Exception) {
@@ -175,7 +174,6 @@ class Queries {
         }
     }
 
-    // TODO: Test
     suspend fun unfollow(toBeUnfollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
