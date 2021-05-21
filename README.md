@@ -17,7 +17,7 @@ Here we describe the basic functionalities based on their location in the code.
 - Create user within Walkmate
 - Log in with a previously created user
 
-![login](https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/login.jpeg?raw=true)
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/login.jpeg?raw=true" width="200" height="433">
 
 ### MainActivity.kt
 
@@ -28,7 +28,7 @@ Here we describe the basic functionalities based on their location in the code.
 - User can go to your profile
 - User can go to search activity
 
-![feed](https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/feed.jpeg?raw=true)
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/feed.jpeg?raw=true" width="200" height="433">
 
 ### NavigationActivity.kt
 
@@ -43,7 +43,7 @@ Activity in which the details of a post are seen.
 - When the user establishes a route, he/she can switch route modes between CAR, BICYCLE or WALK to alternate routes with the same points. Info is updated
 - Routes are automatically displayed on users tap or route mode selection
 
-![navigation](https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/navigation.jpeg?raw=true)
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/navigation.jpeg?raw=true" width="200" height="433">
 
 ### NewPostActivity.kt
 
@@ -53,7 +53,7 @@ Activity in which the details of a post are seen.
 - User can enable the location to automatically locate itself in the map, as the map is established in Madrid, Spain by default
 - User can switch between map modes anytime while maintaining the marker: OUTDOORS and SATELLITE
 
-![newpost](https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/newpost.jpeg?raw=true)
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/newpost.jpeg?raw=true" width="200" height="433">
 
 ### ProfileActivity.kt
 
@@ -64,10 +64,10 @@ Activity in which the details of a post are seen.
 - If the profile is the current user's, user can delete any post he or she wants by swiping left or right
 - If the profile is not the current user's, a FOLLOW or UNFOLLOW button is displayed to follow or unfollow said user
 
-![profile](https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/profile.jpeg?raw=true)
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/profile.jpeg?raw=true" width="200" height="433">
 
 ### SearchActivity.kt
 
 - Users can search for other users by name and see their profiles
 
-![search](https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/search.jpeg?raw=true)
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/search.jpeg?raw=true" width="200" height="433">
