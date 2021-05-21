@@ -71,6 +71,7 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.toolbar_menu, menu)
         menu?.findItem(R.id.toolbar_done)?.isVisible = false
+        menu?.findItem(R.id.toolbar_search)?.isVisible = false
         return true
     }
 

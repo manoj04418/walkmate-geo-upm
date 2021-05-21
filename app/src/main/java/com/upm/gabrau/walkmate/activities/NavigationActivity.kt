@@ -138,6 +138,7 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         menuInflater.inflate(R.menu.toolbar_menu, menu)
         menu?.findItem(R.id.toolbar_done)?.isVisible = false
         menu?.findItem(R.id.toolbar_logout)?.isVisible = false
+        menu?.findItem(R.id.toolbar_search)?.isVisible = false
         return true
     }
 

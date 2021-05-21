@@ -11,6 +11,8 @@ import com.upm.gabrau.walkmate.models.Post
 import com.upm.gabrau.walkmate.models.User
 import kotlinx.coroutines.tasks.await
 import java.lang.Exception
+import java.util.*
+import kotlin.collections.ArrayList
 
 class Queries {
     private var instance: FirebaseFirestore = Firebase.firestore
@@ -40,6 +42,7 @@ class Queries {
         return try {
             val ref = auth.createUserWithEmailAndPassword(email, password).await()
             ref.user?.uid?.let {
+                user.keywords = generateKeywords(user.name!!)
                 instance.collection("users").document(it).set(user.toMap()).await()
                 user
             }
@@ -54,6 +57,23 @@ class Queries {
             true
         } catch (e: Exception) {
             false
+        }
+    }
+
+    suspend fun getUsersByQuery(query: String): ArrayList<User?> {
+        return try {
+            if (auth.currentUser == null) arrayListOf()
+            else {
+                val users: ArrayList<User?> = arrayListOf()
+                val ref = instance.collection("users").whereArrayContains("keywords",
+                    query.lowercase(Locale.getDefault())).get().await()
+                ref.documents.forEach { user ->
+                    users.add(user.toObject())
+                }
+                users
+            }
+        } catch (e: Exception) {
+            arrayListOf()
         }
     }
 
@@ -194,5 +214,13 @@ class Queries {
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun generateKeywords(name: String): ArrayList<String> {
+        val keywords = arrayListOf<String>()
+        name.forEachIndexed { x, _ ->
+            keywords.add(name.substring(0, x+1).lowercase(Locale.getDefault()))
+        }
+        return keywords
     }
 }

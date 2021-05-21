@@ -3,6 +3,7 @@ package com.upm.gabrau.walkmate.activities
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
+import android.view.MenuItem
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -59,6 +60,17 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         menu?.findItem(R.id.toolbar_done)?.isVisible = false
         menu?.findItem(R.id.toolbar_logout)?.isVisible = false
         return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when(item.itemId) {
+            R.id.toolbar_search -> {
+                val intent = Intent(baseContext, SearchActivity::class.java)
+                startActivity(intent)
+                true
+            }
+            else -> true
+        }
     }
 
     private fun updateList() {
