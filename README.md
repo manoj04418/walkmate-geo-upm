@@ -42,8 +42,10 @@ Activity in which the details of a post are seen.
 - When the user establishes a route, the ETA (Estimated Time of Arrival) and the distance between points are shown as additional information
 - When the user establishes a route, he/she can switch route modes between CAR, BICYCLE or WALK to alternate routes with the same points. Info is updated
 - Routes are automatically displayed on users tap or route mode selection
+- When the user has enabled the location, the user can tap on the data button to go to a full view of step navigation view to actually go to the _goal_ from the user's location
 
 <img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/navigation.jpeg?raw=true" width="200" height="433">
+<img src="https://github.com/gabrielglbh/walkmate-geo-upm/blob/main/assets/map.jpeg?raw=true" width="200" height="433">
 
 ### NewPostActivity.kt
 

@@ -21,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -57,6 +58,11 @@ import com.mapbox.navigation.base.internal.extensions.applyDefaultParams
 import com.mapbox.navigation.base.internal.extensions.coordinates
 import com.mapbox.navigation.core.MapboxNavigation
 import com.mapbox.navigation.core.directions.session.RoutesRequestCallback
+import com.mapbox.navigation.ui.NavigationView
+import com.mapbox.navigation.ui.NavigationViewOptions
+import com.mapbox.navigation.ui.OnNavigationReadyCallback
+import com.mapbox.navigation.ui.listeners.NavigationListener
+import com.mapbox.navigation.ui.map.NavigationMapboxMap
 import com.upm.gabrau.walkmate.R
 import com.upm.gabrau.walkmate.models.Post
 import com.upm.gabrau.walkmate.utils.AddressAdapter
@@ -66,7 +72,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMapClickListener,
-    AddressAdapter.OnAddressClicked {
+    AddressAdapter.OnAddressClicked, OnNavigationReadyCallback, NavigationListener {
 
     private val isCurrentLocationRequested: MutableLiveData<Boolean> = MutableLiveData()
     private val changedUI: MutableLiveData<String> = MutableLiveData()
@@ -87,6 +93,10 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
 
     private var mapboxNavigation: MapboxNavigation? = null
     private var mapboxMap: MapboxMap? = null
+    private var navigationView: NavigationView? = null
+    private var navigationMapboxMap: NavigationMapboxMap? = null
+    private var mapboxRoute: DirectionsRoute? = null
+
     private var selectedPoint: LatLng? = null
 
     private var gatheredAddresses: List<Address>? = arrayListOf()
@@ -112,6 +122,7 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         data.visibility = View.INVISIBLE
 
         mapView = findViewById(R.id.mapView)
+        navigationView = findViewById(R.id.navigationView)
         mapView.onCreate(savedInstanceState)
         mapView.getMapAsync(this)
 
@@ -216,6 +227,13 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
         toolbar.setNavigationOnClickListener{ onBackPressed() }
+    }
+
+    override fun onBackPressed() {
+        navigationView?.let {
+            if (it.isVisible) setRouteActive(false)
+            else super.onBackPressed()
+        }
     }
 
     private fun initFABStyle() {
@@ -344,11 +362,27 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
                     cycleMode.visibility = View.VISIBLE
                     walkMode.visibility = View.VISIBLE
 
-                    val route = mapboxNavigation?.getRoutes()?.get(0)
-                    route?.let { t ->
+                    mapboxRoute = mapboxNavigation?.getRoutes()?.get(0)
+                    mapboxRoute?.let { t ->
                         val d = "ETA: ${(t.duration() / 60.0).roundToInt()} min, " +
                                 "Distance: ${(t.distance() / 1000).roundToInt()} km"
                         data.text = d
+                        data.setOnClickListener {
+                            val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+                            var enabled = false
+
+                            try {
+                                enabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                            } catch (ex: java.lang.Exception) { }
+
+                            if (enabled) {
+                                navigationView?.initialize(this@NavigationActivity)
+                                setRouteActive(true)
+                            } else {
+                                Toast.makeText(baseContext, "You have to enable the location to navigate to the goal",
+                                    Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
             }
@@ -422,6 +456,33 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    private fun setRouteActive(activate: Boolean) {
+        if (activate) {
+            navigationView?.visibility = View.VISIBLE
+            mapView.visibility = View.INVISIBLE
+            carMode.visibility = View.INVISIBLE
+            cycleMode.visibility = View.INVISIBLE
+            walkMode.visibility = View.INVISIBLE
+            data.visibility = View.INVISIBLE
+            fab.visibility = View.INVISIBLE
+            locationFab.visibility = View.INVISIBLE
+            locationLayout.visibility = View.INVISIBLE
+            addresses.visibility = View.INVISIBLE
+        } else {
+            navigationView?.stopNavigation()
+            navigationView?.visibility = View.INVISIBLE
+            mapView.visibility = View.VISIBLE
+            carMode.visibility = View.VISIBLE
+            cycleMode.visibility = View.VISIBLE
+            walkMode.visibility = View.VISIBLE
+            data.visibility = View.VISIBLE
+            fab.visibility = View.VISIBLE
+            locationFab.visibility = View.VISIBLE
+            locationLayout.visibility = View.VISIBLE
+            addresses.visibility = View.VISIBLE
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
             1 -> {
@@ -446,4 +507,24 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         selectedPoint = loc
         mapboxMap?.cameraPosition = CameraPosition.Builder().zoom(12.0).target(loc).build()
     }
+
+    override fun onNavigationReady(isRunning: Boolean) {
+        if (!isRunning) {
+            if (navigationView?.retrieveNavigationMapboxMap() != null) {
+                navigationMapboxMap = navigationView?.retrieveNavigationMapboxMap()!!
+                navigationView?.retrieveMapboxNavigation()?.let { this.mapboxNavigation = it }
+                val optionsBuilder = NavigationViewOptions.builder(this)
+                optionsBuilder.navigationListener(this)
+                optionsBuilder.directionsRoute(mapboxRoute)
+                optionsBuilder.shouldSimulateRoute(false)
+                navigationView?.startNavigation(optionsBuilder.build())
+            }
+        }
+    }
+
+    override fun onCancelNavigation() { setRouteActive(false) }
+
+    override fun onNavigationFinished() { setRouteActive(false) }
+
+    override fun onNavigationRunning() { }
 }
