@@ -24,11 +24,18 @@ import kotlinx.coroutines.launch
 class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     private lateinit var binding: ActivityProfileBinding
     private var posts = arrayListOf<Post?>()
+    /** Holds the value for showing or not the FOLLOW button */
     private val isFollowing: MutableLiveData<Boolean> = MutableLiveData()
 
     private lateinit var profileUid: String
     private var isCurrentUser: Boolean = false
 
+    /**
+     * Initializes the [isFollowing] value for further use in code.
+     *
+     * Sets up the toolbar and metadata of the user. We also set up the observers for the values
+     * [isFollowing].
+     * */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -75,6 +82,9 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         return true
     }
 
+    /**
+     * Handles the menu buttons. This case the log out button.
+     * */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when(item.itemId) {
             R.id.toolbar_logout -> {
@@ -100,6 +110,10 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         binding.toolbar.root.setNavigationOnClickListener { onBackPressed() }
     }
 
+    /**
+     * Initializes the followers and following counters by calling the getNumberOfFollowers and
+     * getNumberOfFollowing from [Queries]
+     * */
     private fun initFollowerCounts() {
         CoroutineScope(Dispatchers.Main).launch {
             val q = Queries()
@@ -112,6 +126,10 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         }
     }
 
+    /**
+     * Initializes the click listener for the FOLLOW button. It calls, depending of the [isFollowing]
+     * value the follow ot unfollow functions from [Queries]
+     * */
     private fun initFollowButton() {
         if (isCurrentUser) binding.followButton.visibility = View.INVISIBLE
         else {
@@ -129,6 +147,10 @@ class ProfileActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         }
     }
 
+    /**
+     * Updates the adapter of the list of posts. This function is called on the refresh draggable.
+     * Called when getUserPosts from [Queries]
+     * */
     private fun updateList() {
         val activity = this
         CoroutineScope(Dispatchers.Main).launch {

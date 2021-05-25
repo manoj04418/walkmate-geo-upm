@@ -17,8 +17,18 @@ import java.util.regex.Pattern
 
 class LogInActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
+    /**
+     * LiveData object to manage the switching between Login and Create user interfaces
+     * */
     private val changedUI: MutableLiveData<Boolean> = MutableLiveData()
 
+    /**
+     * This function serves as a disjunction for showing the actual loading screen
+     * or navigate to the [MainActivity]. It depends on the actual session of the user:
+     *
+     * If it is active --> navigate to [MainActivity], no need to log in
+     * If it not active --> log in authentication is needed
+     * */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -50,6 +60,10 @@ class LogInActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Manages the CREATE USER - LOG IN button, depending on [changedUI] value.
+     * It makes the required validation and then calls signUser or createUser from [Queries]
+     * */
     private fun initButton() {
         binding.createUserButton.setOnClickListener {
             changedUI.value?.let {

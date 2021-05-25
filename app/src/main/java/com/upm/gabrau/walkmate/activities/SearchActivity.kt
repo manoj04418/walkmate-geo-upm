@@ -46,10 +46,15 @@ class SearchActivity : AppCompatActivity(), UserAdapter.OnItemClickListener {
         return true
     }
 
+    /** Updates the adapter with new users to paint on the UI when necessary after queries */
     private fun updateAdapter(list: ArrayList<User?>) {
         binding.recyclerViewUsers.adapter = UserAdapter(list, this)
     }
 
+    /**
+     * Initializes the search view and create the listener for the query text. When the user submits
+     * the query, getUsersByQuery from [Queries] is called, retrieving the users that match the query.
+     * */
     private fun initSearchView() {
         binding.search.isActivated = true
         binding.search.onActionViewExpanded()

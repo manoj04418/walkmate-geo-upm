@@ -74,8 +74,11 @@ import kotlin.math.roundToInt
 class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMapClickListener,
     AddressAdapter.OnAddressClicked, OnNavigationReadyCallback, NavigationListener {
 
+    /** Variable to see in RunTime if the location has been requested */
     private val isCurrentLocationRequested: MutableLiveData<Boolean> = MutableLiveData()
+    /** Variable to manage the Map Style in RunTime: OUTDOORS, SATELLITE */
     private val changedUI: MutableLiveData<String> = MutableLiveData()
+    /** Variable to manage the route mode in RunTime: CAR, CYCLE, WALK */
     private val changedRouteMode: MutableLiveData<String> = MutableLiveData()
     private lateinit var post: Post
 
@@ -91,14 +94,18 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
     private lateinit var locationLayout: TextInputLayout
     private lateinit var locationEditText: TextInputEditText
 
+    /** Holds the navigation instance of the map and serves for getting the routes and directions */
     private var mapboxNavigation: MapboxNavigation? = null
+    /** Holds the MapBox map instance */
     private var mapboxMap: MapboxMap? = null
+    /** Holds the [NavigationView] UI reference */
     private var navigationView: NavigationView? = null
     private var navigationMapboxMap: NavigationMapboxMap? = null
+    /** Holds the route extracted from [mapboxNavigation] */
     private var mapboxRoute: DirectionsRoute? = null
-
+    /** Holds the selected point at any given time: clicked on map, current location or text searched */
     private var selectedPoint: LatLng? = null
-
+    /** Holds the addresses extracted from the [Geocoder] when a text search is done */
     private var gatheredAddresses: List<Address>? = arrayListOf()
 
     private val sourceRoute = "ROUTE_SOURCE"
@@ -109,6 +116,16 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
     private val layerClick = "CLICK_LAYER"
     private val layerOrigin = "ORIGIN_LAYER"
 
+    /**
+     * Initializes the [changedUI], [changedRouteMode] and [isCurrentLocationRequested] for further use
+     * in latter code.
+     *
+     * Initializes all the views, as MapBox routes and navigation does not seem to go well with data binding.
+     * Creates the [mapView] and the [mapboxNavigation] options.
+     *
+     * Also, sets up all the required additional views such as the observers for the [MutableLiveData]
+     * objects, the toolbar, EditTexts, FABs and chips.
+     * */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
@@ -145,6 +162,9 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         mapboxNavigation = MapboxNavigation(mapboxNavigationOptions)
     }
 
+    /**
+     * Inflates the menu from the custom toolbar and hides all menu items.
+     * */
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.toolbar_menu, menu)
         menu?.findItem(R.id.toolbar_done)?.isVisible = false
@@ -153,6 +173,21 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         return true
     }
 
+    /**
+     * Function called when the MapBox map is actually ready to be initialized with custom data.
+     *
+     * Here we get the [LocationComponent] in order to manage the user's location in the map. This will
+     * be used for painting the location in the map depending on the [isCurrentLocationRequested] value
+     * and the state of the location permission.
+     *
+     * Also, we set the map style to the [changedUI] value and, when the style is ready and set, we
+     * set up the goal (Geo point of [post]), make the layers of the map to draw all the things in
+     * an ordered way and set up the map click listener.
+     *
+     * Finally, as the [changedUI] controls the style, everytime it is changed, setStyle is called
+     * thus erasing the content of all layers. We managed the re-draw of all content at the beginning
+     * of the setStyle function in order to make it seem to the user that when changing styles, all is preserved.
+     * */
     override fun onMapReady(mapboxMap: MapboxMap) {
         val locationComponent = mapboxMap.locationComponent
         val locationComponentOptions = LocationComponentOptions.builder(this)
@@ -191,6 +226,13 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Function that observes [changedUI] and [changedRouteMode] values and executes the closure code
+     * when the value changes.
+     *
+     * [changedUI] calls again [onMapReady] and hides all extra UI when a route is present
+     * [changedRouteMode] changes the color of the selected FAB and it automatically changes the route
+     * */
     private fun setUpObservers() {
         changedUI.observe(this, {
             mapboxMap?.let { onMapReady(it) }
@@ -219,6 +261,7 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         })
     }
 
+    /** Initializes the custom toolbar */
     private fun toolbar() {
         toolbar = findViewById(R.id.toolbar)
         findViewById<ImageView>(R.id.backpack).visibility = View.GONE
@@ -229,6 +272,12 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         toolbar.setNavigationOnClickListener{ onBackPressed() }
     }
 
+    /**
+     * Manages the on back pressed:
+     *
+     * If the [navigationView] is visible and the navigation is active, closes the navigation and return
+     * to initial interface. Else, finishes the activity.
+     * */
     override fun onBackPressed() {
         navigationView?.let {
             if (it.isVisible) setRouteActive(false)
@@ -236,6 +285,10 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Sets the click listener for the Map Style. When clicked, it actually changes the value of
+     * [changedUI], triggering the observer from [setUpObservers] and changes the UI of the FAB itself
+     * */
     private fun initFABStyle() {
         fab = findViewById(R.id.fab_map_style)
         fab.setOnClickListener {
@@ -249,6 +302,10 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Initializes the FABs for the route modes and sets the listeners. They actually change the value
+     * of [changedRouteMode], triggering the observer from [setUpObservers]
+     * */
     private fun initChipModes() {
         carMode = findViewById(R.id.mode_car)
         cycleMode = findViewById(R.id.mode_cycle)
@@ -263,6 +320,12 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         walkMode.setOnClickListener { changedRouteMode.value = DirectionsCriteria.PROFILE_WALKING }
     }
 
+    /**
+     * Initializes the [GeoJsonSource] and the layers ([LineLayer] for routes, [SymbolLayer] for markers)
+     * for the MapBox map.
+     *
+     * @param it style of the map to draw the layers in
+     * */
     private fun initSourceAndLayers(it: Style) {
         it.addSource(GeoJsonSource(sourceClick))
         it.addSource(GeoJsonSource(sourceOrigin))
@@ -288,8 +351,13 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
             .withProperties(iconImage("ICON_ID")), layerOrigin)
     }
 
+    /** Updates the adapter with new addresses to paint on the UI when necessary */
     private fun initAdapter() { addresses.adapter = AddressAdapter(gatheredAddresses!!, this) }
 
+    /**
+     * Initializes the editing done of the text view. When the user is done typing, [gatheredAddresses]
+     * is called for retrieving the most likely addresses for the user to choose.
+     * */
     private fun initLocationEditText() {
         locationLayout = findViewById(R.id.layout_location)
         locationEditText = findViewById(R.id.edit_text_location)
@@ -304,6 +372,10 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Draws the initial geo point of the [post] in the marker layer of the map.
+     * This point is static and final. It is not changed through out the life of the activity.
+     */
     private fun drawInitialPoint() {
         val p = post.geoPoint
         val origin = p?.let { point -> LatLng(point.latitude, point.longitude) }
@@ -313,6 +385,15 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Draws the route when a marker is added in the map. The route is established between the
+     * initial point and the [selectedPoint]. It is drawn in the [LineLayer] of the map. Here is where
+     * the [changedRouteMode] is used. It makes use of [routesReqCallback] to actually draw the route
+     * when it is ready.
+     *
+     * @param origin point
+     * @param dest point
+     * */
     private fun drawRoute(origin: Point, dest: Point) {
         mapboxNavigation?.requestRoutes(
             RouteOptions.builder().applyDefaultParams()
@@ -323,6 +404,10 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
                 .build(), routesReqCallback)
     }
 
+    /**
+     * Draws the route when the location is active. The route is established between the
+     * initial point and the user's location. It is drawn in the [LineLayer] of the map.
+     * */
     private fun drawRouteWithLocation() {
         mapboxMap?.locationComponent?.lastKnownLocation?.let { originLocation ->
             selectedPoint = LatLng(originLocation.latitude, originLocation.longitude)
@@ -332,6 +417,12 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Draws the marker when the user clicked the map in a certain location. It is drawn in the
+     * [SymbolLayer].
+     *
+     * @param latLng point extracted from the map
+     * */
     private fun drawPoint(latLng: LatLng) : Point {
         val origin = Point.fromLngLat(latLng.longitude, latLng.latitude)
         mapboxMap?.getStyle {
@@ -341,6 +432,11 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         return origin
     }
 
+    /**
+     * Draws the point with [drawPoint] and automatically draws the route with [drawRoute]
+     *
+     * @param latLng point extracted from the map
+     * */
     override fun onMapClick(latLng: LatLng): Boolean {
         selectedPoint = latLng
         val origin = drawPoint(latLng)
@@ -349,6 +445,13 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         return true
     }
 
+    /**
+     * Callback that is called when the route is ready to be painted in the map.
+     *
+     * UI changes once the route is ready and sets the click listener to the [data] button. It makes it
+     * so the user can initialize a route navigation view to go to the goal point. It only works when the
+     * location is enabled.
+     * */
     private val routesReqCallback = object : RoutesRequestCallback {
         override fun onRoutesReady(routes: List<DirectionsRoute>) {
             if (routes.isNotEmpty()) {
@@ -391,11 +494,19 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         override fun onRoutesRequestCanceled(routeOptions: RouteOptions) {}
     }
 
+    /**
+     * Translates the geo point from the [post] to [Point]
+     * */
     private fun getPointFromPostAddress(): Point? {
         val p = post.geoPoint
         return p?.let { Point.fromLngLat(it.longitude, it.latitude) }
     }
 
+    /**
+     * Function that gets the [locationEditText] text that the user has written and extracts at most
+     * 5 different results with [Geocoder]. When retrieved, updates the adapter with [initAdapter]
+     * to paint the different addresses below the [locationLayout]
+     * */
     private fun gatheredAddresses(): Boolean {
         return try {
             val geocoder = Geocoder(this)
@@ -407,6 +518,12 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Set ups the observer for [isCurrentLocationRequested]. It will enable or disable
+     * the [locationComponent] depending of the value.
+     *
+     * @param locationComponent from the MapBox map to enable and show the location in the map
+     * */
     @SuppressLint("MissingPermission")
     private fun observeLocationEnabled(locationComponent: LocationComponent) {
         locationComponent.isLocationComponentEnabled = false
@@ -423,6 +540,11 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         })
     }
 
+    /**
+     * Sets up the [locationFab] click listener. It will check if the location is enabled or not, and
+     * then proceed and request the permission to use it. Upon handling, [isCurrentLocationRequested]
+     * will update its value.
+     * */
     private fun setUpLocationFAB() {
         locationFab = findViewById(R.id.fab_location)
         locationFab.setOnClickListener {
@@ -456,6 +578,11 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         }
     }
 
+    /**
+     * Function that hides or shows the whole route view upon showing the [navigationView].
+     *
+     * @param activate the [navigationView] or not
+     * */
     private fun setRouteActive(activate: Boolean) {
         if (activate) {
             navigationView?.visibility = View.VISIBLE
@@ -508,6 +635,10 @@ class NavigationActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.On
         mapboxMap?.cameraPosition = CameraPosition.Builder().zoom(12.0).target(loc).build()
     }
 
+    /**
+     * Called when the navigation view is actually ready to be shown and we set up all the necessary things
+     * for the view to work.
+     * */
     override fun onNavigationReady(isRunning: Boolean) {
         if (!isRunning) {
             if (navigationView?.retrieveNavigationMapboxMap() != null) {

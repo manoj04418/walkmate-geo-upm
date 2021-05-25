@@ -14,10 +14,19 @@ import java.lang.Exception
 import java.util.*
 import kotlin.collections.ArrayList
 
+/**
+ * Class that holds all the Firebase queries
+ * */
 class Queries {
     private var instance: FirebaseFirestore = Firebase.firestore
     private var auth: FirebaseAuth = Firebase.auth
 
+    /**
+     * Gets the user
+     *
+     * @param userId user id to be extracted. If no user id is stated, it will automatically select
+     * the user from the [auth]
+     * */
     suspend fun getUser(userId: String? = null): User? {
         return try {
             if (auth.currentUser == null) null
@@ -38,6 +47,13 @@ class Queries {
 
     fun getCurrentUserId(): String? = if (isUserSessionActive()) auth.currentUser!!.uid else null
 
+    /**
+     * Creates the user in Firebase and Authentication services
+     *
+     * @param email of the user
+     * @param password of the user
+     * @param user object to be set in Cloud Firestore
+     * */
     suspend fun createUser(email: String, password: String, user: User): User? {
         return try {
             val ref = auth.createUserWithEmailAndPassword(email, password).await()
@@ -51,6 +67,12 @@ class Queries {
         }
     }
 
+    /**
+     * Signs in the user with provided credentials
+     *
+     * @param email of the user
+     * @param password of the user
+     * */
     suspend fun signUser(email: String, password: String): Boolean {
         return try {
             auth.signInWithEmailAndPassword(email, password).await()
@@ -60,6 +82,11 @@ class Queries {
         }
     }
 
+    /**
+     * Retrieves all users with a query that tries to match the keywords from the users
+     *
+     * @param query text to be searched in the keywords from [User]
+     * */
     suspend fun getUsersByQuery(query: String): ArrayList<User?> {
         return try {
             if (auth.currentUser == null) arrayListOf()
@@ -77,6 +104,12 @@ class Queries {
         }
     }
 
+    /**
+     * Gets the user posts
+     *
+     * @param userId user id to be extracted the post from. If no user id is stated, it will
+     * automatically select the user from the [auth]
+     * */
     suspend fun getUserPosts(userId: String? = null): ArrayList<Post?>? {
         return try {
             if (auth.currentUser == null) null
@@ -95,6 +128,11 @@ class Queries {
         }
     }
 
+    /**
+     * Uploads a post. This action can only be done by the current user.
+     *
+     * @param post to be uploaded
+     * */
     suspend fun uploadPost(post: Post): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -107,6 +145,11 @@ class Queries {
         }
     }
 
+    /**
+     * Remove a post. This action can only be done by the current user.
+     *
+     * @param post to be removed
+     * */
     suspend fun removePost(post: Post): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -119,6 +162,12 @@ class Queries {
         }
     }
 
+    /**
+     * Gets the number of followers for a given user
+     *
+     * @param userId user id to be extracted the post from. If no user id is stated, it will
+     * automatically select the user from the [auth]
+     * */
     suspend fun getNumberOfFollowers(userId: String? = null): Int {
         return try {
             if (auth.currentUser == null) 0
@@ -132,6 +181,12 @@ class Queries {
         }
     }
 
+    /**
+     * Gets the number of followees for a given user
+     *
+     * @param userId user id to be extracted the post from. If no user id is stated, it will
+     * automatically select the user from the [auth]
+     * */
     suspend fun getNumberOfFollowing(userId: String? = null): Int {
         return try {
             if (auth.currentUser == null) 0
@@ -145,6 +200,11 @@ class Queries {
         }
     }
 
+    /**
+     * Checks if the current user is following another given user
+     *
+     * @param otherUser id to check the follower-followee relation
+     * */
     suspend fun isUserFollowingUser(otherUser: String): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -158,6 +218,11 @@ class Queries {
         }
     }
 
+    /**
+     * Makes the follower-followee relation between the current user and another given user
+     *
+     * @param toBeFollowed id to make the follower-followee relation
+     * */
     suspend fun follow(toBeFollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -174,6 +239,11 @@ class Queries {
         }
     }
 
+    /**
+     * Removes the follower-followee relation between the current user and another given user
+     *
+     * @param toBeUnfollowed id to make remove the follower-followee relation
+     * */
     suspend fun unfollow(toBeUnfollowed: String): Boolean {
         return try {
             if (auth.currentUser == null) false
@@ -187,6 +257,10 @@ class Queries {
         }
     }
 
+    /**
+     * Retrieves all posts from the current user's followees. First we get the users the current
+     * user is following. Then we get all posts from the followees and set the posts.
+     * */
     suspend fun getUserFeed(): ArrayList<Post?>? {
         return try {
             if (auth.currentUser == null) null
@@ -215,6 +289,9 @@ class Queries {
         }
     }
 
+    /**
+     * Function that generates the keywords for the user name and to enable the fake query search
+     * */
     private fun generateKeywords(name: String): ArrayList<String> {
         val keywords = arrayListOf<String>()
         name.forEachIndexed { x, _ ->

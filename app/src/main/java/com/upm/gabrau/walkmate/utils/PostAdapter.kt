@@ -49,6 +49,13 @@ class PostAdapter(
         }
     }
 
+    /**
+     * Initializes the post interface.
+     *
+     * First, we get the creator and initialize the click listener of the name to navigate to the
+     * [ProfileActivity]. Then, we parse the post created date. Finally, we initialize a mini map
+     * with MapBox and set the camera to the post point and disable all interface to better the UX.
+     * */
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
         with(holder) {
             with(postList[position]) {

@@ -22,6 +22,9 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
     private lateinit var binding: ActivityMainBinding
     private var posts = arrayListOf<Post?>()
 
+    /**
+     * Creates and initializes the basic views
+     * */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -59,6 +62,9 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         }
     }
 
+    /**
+     * Inflates the menu and hides unnecessary buttons
+     * */
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.toolbar_menu, menu)
         menu?.findItem(R.id.toolbar_done)?.isVisible = false
@@ -66,6 +72,9 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         return true
     }
 
+    /**
+     * Manages the click on the visible buttons, this case the Search
+     * */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when(item.itemId) {
             R.id.toolbar_search -> {
@@ -77,6 +86,13 @@ class MainActivity : AppCompatActivity(), PostAdapter.OnItemClickListener {
         }
     }
 
+    /**
+     * This function updates the adapter of the RecyclerView everytime it is called.
+     * It is invoked inside the refresh draggable, so everytime the user refreshes the list
+     * by dragging the list from the top, the getUserFeed function from [Queries] is called
+     * retrieving the latest posts of the following people of the user, and updating the adaptor
+     * as well as the local variable [posts]
+     * */
     private fun updateList() {
         val activity = this
         CoroutineScope(Dispatchers.Main).launch {

@@ -50,16 +50,28 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
     AddressAdapter.OnAddressClicked {
 
     private lateinit var binding: ActivityNewPostBinding
+    /** Variable to see in RunTime if the location has been requested */
     private val isCurrentLocationRequested: MutableLiveData<Boolean> = MutableLiveData()
+    /** Variable to manage the Map Style in RunTime: OUTDOORS, SATELLITE */
     private val changedUI: MutableLiveData<String> = MutableLiveData()
 
+    /** Holds the MapBox map instance */
     private var mapboxMap: MapboxMap? = null
+    /** Holds the addresses extracted from the [Geocoder] when a text search is done */
     private var addresses: List<Address>? = arrayListOf()
+    /** Holds the selected point at any given time: clicked on map, current location or text searched */
     private var selectedPoint: LatLng? = null
 
     private val sourceOrigin = "ORIGIN_SOURCE"
     private val layerOrigin = "ORIGIN_LAYER"
 
+    /**
+     * Initializes the [changedUI] and [isCurrentLocationRequested] for further use
+     * in latter code.
+     *
+     * Also, sets up all the required additional views such as the observers for the [MutableLiveData]
+     * objects, the toolbar, EditTexts, FABs.
+     * */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Mapbox.getInstance(this, getString(R.string.mapbox_access_token))
@@ -83,6 +95,20 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         setUpLocationFAB()
     }
 
+    /**
+     * Function called when the MapBox map is actually ready to be initialized with custom data.
+     *
+     * Here we get the [LocationComponent] in order to manage the user's location in the map. This will
+     * be used for painting the location in the map depending on the [isCurrentLocationRequested] value
+     * and the state of the location permission.
+     *
+     * Also, we set the map style to the [changedUI] value and, when the style is ready and set, we
+     * make the layers of the map to draw all the things in an ordered way and set up the map click listener.
+     *
+     * Finally, as the [changedUI] controls the style, everytime it is changed, setStyle is called
+     * thus erasing the content of all layers. We managed the re-draw of all content at the beginning
+     * of the setStyle function in order to make it seem to the user that when changing styles, all is preserved.
+     * */
     override fun onMapReady(mapboxMap: MapboxMap) {
         val locationComponent = mapboxMap.locationComponent
         val locationComponentOptions = LocationComponentOptions.builder(this)
@@ -131,6 +157,10 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         return true
     }
 
+    /**
+     * Handles the DONE button from the toolbar to actually upload the post when validated.
+     * It calls the function uploadPost from [Queries].
+     * */
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when(item.itemId) {
             R.id.toolbar_done -> {
@@ -158,6 +188,7 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         }
     }
 
+    /** Sets up the toolbar */
     private fun toolbar() {
         findViewById<ImageView>(R.id.backpack).visibility = View.GONE
         setSupportActionBar(binding.toolbar.root)
@@ -167,8 +198,13 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         binding.toolbar.root.setNavigationOnClickListener { onBackPressed() }
     }
 
+    /** Updates the adapter with new addresses to paint on the UI when necessary */
     private fun initAdapter() { binding.gatheredAddresses.adapter = AddressAdapter(addresses!!, this) }
 
+    /**
+     * Initializes the editing done of the text view. When the user is done typing, [gatheredAddresses]
+     * is called for retrieving the most likely addresses for the user to choose.
+     * */
     private fun initLocationEditText(view: View) {
         binding.editTextLocation.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -181,6 +217,11 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         }
     }
 
+    /**
+     * Function that gets the location text that the user has written and extracts at most
+     * 5 different results with [Geocoder]. When retrieved, updates the adapter with [initAdapter]
+     * to paint the different addresses below the location edit text
+     * */
     private fun gatheredAddresses(): Boolean {
         return try {
             val geocoder = Geocoder(this)
@@ -192,6 +233,13 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         }
     }
 
+    /**
+     * Draws the marker when the user clicked the map in a certain location. It is drawn in the
+     * [SymbolLayer].
+     *
+     * @param location point extracted from the map
+     * @param moveCamera whether to move the camera to the point or not
+     * */
     private fun drawMarker(location: LatLng, moveCamera: Boolean = true): Boolean {
         mapboxMap?.let { map ->
             val origin = Point.fromLngLat(location.longitude, location.latitude)
@@ -213,6 +261,10 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         return true
     }
 
+    /**
+     * Sets the click listener for the Map Style. When clicked, it actually changes the value of
+     * [changedUI], triggering the observer from [setUpObservers] and changes the UI of the FAB itself
+     * */
     private fun initFABStyle() {
         binding.fabMapStyle.setOnClickListener {
             if (changedUI.value == Style.SATELLITE) {
@@ -225,6 +277,12 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         }
     }
 
+    /**
+     * Set ups the observer for [isCurrentLocationRequested]. It will enable or disable
+     * the [locationComponent] depending of the value.
+     *
+     * @param locationComponent from the MapBox map to enable and show the location in the map
+     * */
     @SuppressLint("MissingPermission")
     private fun observeLocationEnabled(locationComponent: LocationComponent) {
         locationComponent.isLocationComponentEnabled = false
@@ -241,6 +299,11 @@ class NewPostActivity : AppCompatActivity(), OnMapReadyCallback, MapboxMap.OnMap
         })
     }
 
+    /**
+     * Sets up the [locationFab] click listener. It will check if the location is enabled or not, and
+     * then proceed and request the permission to use it. Upon handling, [isCurrentLocationRequested]
+     * will update its value.
+     * */
     private fun setUpLocationFAB() {
         binding.fabLocation.setOnClickListener {
             val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
